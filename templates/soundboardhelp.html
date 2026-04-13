@@ -1,0 +1,14 @@
+<div class="soundboard-container soundboard-help">
+    <h2 class="sb-help-header" style="font-size:1.3rem;padding-top:8px;cursor:default;">
+        SoundBoard by Jack <small style="font-size:0.7rem;color:#888;">v1.0.2</small>
+    </h2>
+    <div style="font-size:12px;color:#555;padding:4px 0 10px;">
+        A GM soundboard for Foundry VTT V14.
+    </div>
+    {{#each help}}
+    <div class="sb-help-section">
+        <h2 class="sb-help-section-title" style="cursor:pointer;">{{title}}</h2>
+        <div class="sb-help-section-body" style="display:none;">{{{body}}}</div>
+    </div>
+    {{/each}}
+</div>

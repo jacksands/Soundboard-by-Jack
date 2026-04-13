@@ -1,0 +1,182 @@
+{
+    "SOUNDBOARD": {
+        "button": {
+            "openSoundboard": "Open SoundBoard",
+            "openSoundboardFav": "Open SoundBoard Favorites",
+            "openSoundboardBundled": "Open SoundBoard Bundled",
+            "stopAllTool": "Stop All SoundBoard Sounds",
+            "packageManagerTool": "Open SoundBoard Package Manager"
+        },
+        "log": {
+            "invalidSound": "is not a valid audio file, skipping"
+        },
+        "settings": {
+            "directory": {
+                "name": "Custom SoundBoard Directory",
+                "hint": "This should point to a folder containing subfolders, each containing audio files. See modules/SoundBoard/exampleAudio/ for an example"
+            },
+            "source": {
+                "name": "Source Type",
+                "hint": "If your sounds are stored in your Forge Assets, select Forge. If they are stored in an S3 bucket, select S3. Otherwise, select Data",
+                "data": "Data",
+                "forgevtt": "Forge",
+                "s3": "S3"
+            },
+            "opacity": {
+                "name": "Defocus Opacity",
+                "hint": "Set the opacity of the SoundBoard when you are not hovering over it. 1 to disable."
+            },
+            "detune": {
+                "name": "Random Detune Amount",
+                "hint": "Randomly detune a sound each time it plays. 0 to disable."
+            },
+            "macroRequest": {
+                "name": "Players trigger SoundBoard macros",
+                "hint": "Enable this to allow players to trigger a sound using a macro with playSoundByName. Requires a connected GM."
+            },
+            "allowPlayersPersonalSoundboard": {
+                "name": "Allow Personal Player SoundBoard",
+                "hint": "Allows the GM to assign sounds to players. Players with access can open their own SoundBoard."
+            },
+            "popoutCompat": {
+                "name": "Force PopOut! Compatibility",
+                "hint": "Override some PopOut! code to force compatibility. Note that this may reduce performance while the SoundBoard is popped out. Changing this setting will refresh your browser."
+            }
+        },
+        "app": {
+            "title": "My Sounds - SoundBoard by Jack",
+            "favTitle": "Favorite Sounds - SoundBoard by Jack",
+            "bundledTitle": "Bundled Sounds - SoundBoard by Jack",
+            "instructions": "Left click a sound button to broadcast it to all players, right click to preview a sound for the GM only. Click the 3 dots to open options for Favoriting and Looping sounds. Click a looping sound to stop it after the current loop. Click Stop to stop all sounds immediately.",
+            "volume": "Volume",
+            "filterText": "Search...",
+            "expandAll": "Expand All",
+            "collapseAll": "Collapse All",
+            "stopAll": "Stop",
+            "noBundledSoundsHeader": "No sound packs active!",
+            "noBundledSoundsDesc": "Install Sound Packs and activate them via the SoundBoard Package Manager",
+            "exampleWarning": "You have not changed the SoundBoard directory from exampleAudio. If you have added files there, they will be deleted when the module updates. Click the Help button at the top right for more information on Custom Audio.",
+            "nav": {
+                "mySounds": "My Sounds",
+                "favorites": "Favorite Sounds",
+                "bundled": "Bundled Sounds"
+            },
+            "toolbar": {
+                "target": "Send sounds to a specific player only"
+            },
+            "tooltip": {
+                "target": "Player targeting",
+                "cache": "Toggle Caching Mode",
+                "refresh": "Refresh all sounds",
+                "macro": "Toggle Macro Mode",
+                "volume": "Toggle Volume Mode",
+                "deleteMacros": "Delete all SoundBoard macros",
+                "openPackMan": "Open package manager",
+                "help": "Open help app",
+                "soundscape": "Soundscape Manager",
+                "playerManager": "Player SoundBoard Manager"
+            },
+            "help": {
+                "title": "SoundBoard Help"
+            },
+            "playerTitle": "My SoundBoard",
+            "packman": {
+                "title": "SoundBoard Package Manager",
+                "installedPacksHeader": "Installed Sound Packs",
+                "installedPacksDesc": "Click to activate or deactivate an installed pack",
+                "package": {
+                    "link": "Link",
+                    "licenseUnknown": "Unknown"
+                },
+                "noPacksHeader": "No Soundpacks Installed",
+                "noPacksDesc": "Install SoundBoard sound packs by searching the module browser for 'SoundBoard Pack'"
+            }
+        },
+        "notif": {
+            "soundsNotLoaded": "Sounds are still loading, please try again shortly",
+            "soundsError": "Error loading sounds. Check your path in module settings",
+            "interfaceMuted": "Please un-mute your interface volume to hear SoundBoard audio",
+            "refreshing": "Refreshing SoundBoard audio...",
+            "refreshComplete": "SoundBoard refresh complete",
+            "macroCreated": "Created Macro: {macro}",
+            "macroExists": "{macro} already exists",
+            "deleteMacros": "Deleted all SoundBoard macros",
+            "noMacros": "No SoundBoard macros to delete",
+            "soundsDiscovered": "All sounds discovered & paths cached. You must use the Refresh button in the SoundBoard UI to fetch new sounds."
+        },
+        "whetstone": {
+            "theme": {
+                "default": {
+                    "title": "SoundBoard Default",
+                    "description": "The default theme for SoundBoard, customisable through Whetstone"
+                }
+            },
+            "var": {
+                "loopbgfrom": {
+                    "title": "Active Loop Background Start Color"
+                },
+                "loopbgto": {
+                    "title": "Active Loop Background End Color",
+                    "hint": "Animates between Start and End colors"
+                },
+                "loopanimationtime": {
+                    "title": "Active Loop Animation Time"
+                },
+                "loopactiveiconcolor": {
+                    "title": "Active Loop Icon Color",
+                    "hint": "Color for the looping icon in extended options"
+                },
+                "looptextcolor": {
+                    "title": "Active Loop Text Color",
+                    "hint": "Button text color for actively looping item"
+                },
+                "favoritecolor": {
+                    "title": "Favorites Color",
+                    "hint": "Changes the favorite star color, and button border color"
+                },
+                "textshadow": {
+                    "title": "General Text Shadow"
+                },
+                "morebuttonactive": {
+                    "title": "More Button Active",
+                    "hint": "Color of the three-dot More button when a sound button is moused over"
+                },
+                "morebuttoninactive": {
+                    "title": "More Button Inactive",
+                    "hint": "Color of the three-dot More button when a sound button is not moused over"
+                },
+                "morebuttonhover": {
+                    "title": "More Button Hover",
+                    "hint": "Color of the three-dot More button when the three-dot button is hovered over"
+                },
+                "extendedoptionsbg": {
+                    "title": "Extended Options Background",
+                    "hint": "Color of the layout seen when the three-dot More button is clicked"
+                },
+                "extendedoptionsicon": {
+                    "title": "Extended Options Icons",
+                    "hint": "Color of the favorite, loop and delay icons when they are not active"
+                },
+                "btntextsize": {
+                    "title": "Button Text Size"
+                },
+                "volumetextcolor": {
+                    "title": "Volume Text Color",
+                    "hint": "Color of the Volume label at the bottom of the SoundBoard"
+                },
+                "toolbarcolor": {
+                    "title": "Toolbar/Container Color",
+                    "hint": "Color of the toolbar, volume container and header bar"
+                },
+                "toolbarbtnactivecolor": {
+                    "title": "Active Toolbar Button Color",
+                    "hint": "Color of a currently active toolbar button (eg. Target Player is selected)"
+                }
+            }
+        },
+        "I18N": {
+            "LANGUAGE": "English",
+            "MAINTAINERS": "Jack (personal fork)"
+        }
+    }
+}

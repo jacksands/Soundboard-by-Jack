@@ -1,0 +1,62 @@
+<div class="soundboard-container" style="padding:8px 12px 46px;">
+
+    {{#if error}}
+    <div style="padding:16px;text-align:center;color:#c00;">
+        <p><b>Could not load sounds.</b></p>
+        {{#if (eq mode 'folder')}}
+        <p style="font-size:12px;">Please set your personal sounds folder below.</p>
+        {{/if}}
+    </div>
+    {{/if}}
+
+    {{#if (eq mode 'folder')}}
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:10px;padding:6px 8px;background:#f0f0f0;border-radius:6px;">
+        <span style="font-size:12px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#555;">
+            {{#if dir}}📁 {{dir}}{{else}}<i>No folder set — click to pick your sounds folder</i>{{/if}}
+        </span>
+        <button type="button" id="player-dir-pick" style="font-size:11px;padding:2px 8px;white-space:nowrap;">📂 Set Folder</button>
+    </div>
+    {{/if}}
+
+    <p style="font-size:11px;color:#666;margin-bottom:6px;">
+        Left-click to broadcast · Right-click to preview locally
+    </p>
+
+    <input id="player-sound-search" type="text" placeholder="Search..."
+           style="width:100%;margin-bottom:8px;box-sizing:border-box;padding:4px 8px;">
+
+    <p style="font-size:11px;color:#888;margin:0 0 6px;">Sounds: {{totalCount}}</p>
+
+    {{#each categories}}
+    <div class="sb-player-category">
+        <h3 class="sb-player-cat-header" style="cursor:pointer;font-size:13px;font-weight:700;
+            text-transform:uppercase;letter-spacing:0.8px;padding:5px 8px;margin:4px 0 2px;
+            background:#ddd;border-radius:5px;user-select:none;">
+            {{categoryName}} <small style="font-weight:400;color:#666;">({{files.length}})</small>
+        </h3>
+        <div class="sb-player-cat-body" style="display:flex;flex-wrap:wrap;gap:3px;padding:2px 0 6px;">
+            {{#each files}}
+            <div class="btn btn-outline-dark col sb-player-btn" style="position:relative;cursor:pointer;font-size:1rem;"
+                 uuid="{{identifyingPath}}">
+                {{name}}
+                {{#if isWild}}<span class="badge badge-light">{{soundboard-getarraycount src}}</span>{{/if}}
+                <button class="sb-play-button"
+                        onclick="SoundBoard.playSound('{{soundboard-escape identifyingPath}}', true)"
+                        oncontextmenu="SoundBoard.previewSound('{{soundboard-escape identifyingPath}}'); return false;"></button>
+            </div>
+            {{/each}}
+        </div>
+    </div>
+    {{else}}
+    <p style="color:#888;font-size:12px;text-align:center;padding:20px 0;">
+        {{#if (eq mode 'folder')}}Set your sounds folder above.{{else}}No sounds available.{{/if}}
+    </p>
+    {{/each}}
+
+    <div style="position:absolute;bottom:0;left:0;right:0;background:#444;padding:5px 15px;
+                display:flex;align-items:center;gap:10px;border-radius:0 0 8px 8px;">
+        <p style="margin:0;color:#fff;font-size:11px;white-space:nowrap;">Volume</p>
+        <input type="range" min="1" max="100" value="{{volume}}" style="flex:1;"
+               onchange="SoundBoard.updateVolume(this.value)">
+    </div>
+</div>

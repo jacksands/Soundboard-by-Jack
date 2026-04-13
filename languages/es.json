@@ -1,0 +1,174 @@
+{
+    "SOUNDBOARD": {
+        "I18N": {
+            "LANGUAGE": "Español",
+            "MAINTAINERS": "@Viriato139ac#0342"
+        },
+        "button": {
+            "openSoundboard": "Abrir SoundBoard",
+            "openSoundboardFav": "Abrir Favoritos SoundBoard",
+            "openSoundboardBundled": "Abrir Paquete Básico SoundBoard",
+            "stopAllTool": "Parar Todos los Sonidos SoundBoard",
+            "packageManagerTool": "Abrir el gestor de paquetes de SoundBoard"
+        },
+        "log": {
+            "invalidSound": "no es un fichero de audio válido, saltando"
+        },
+        "settings": {
+            "directory": {
+                "name": "Directorio Personalizado de SoundBoard",
+                "hint": "Debería se un lugar con subdirectorios que contengan ficheros de audio. Puede consultar un ejemplo en modules/SoundBoard/exampleAudio/"
+            },
+            "source": {
+                "name": "Tipo de Fuente",
+                "hint": "Si los audios están en Recursos de Forge, seleccione Forge. Si lo están en un cubo S3, seleccione S3. En caso contrario, seleccione Datos",
+                "data": "Datos",
+                "forgevtt": "Forge",
+                "s3": "S3"
+            },
+            "opacity": {
+                "name": "Opacidad sin el foco",
+                "hint": "Ajusta la opacidad de SoundBoard cuando no se tiene el ratón sobre él. Ponga 1 para desactivar"
+            },
+            "detune": {
+                "name": "Cantidad aleatoria de desafinado",
+                "hint": "Desafinado aleatoriamente un sonido cada vez que se reproduce. Ponga 0 para desactivar."
+            },
+            "macroRequest": {
+                "name": "Jugadores ejecutan macros SoundBoard",
+                "hint": "Habilita esta opción para permitir que los jugadores ejecuten macros para lanzar sonidos usando playSoundByName. Se requiere que haya un GM conectado"
+            },
+            "popoutCompat": {
+                "name": "Forzar compatibilidad con PopOut!",
+                "hint": "Sobrescribe parte del código de PopOut! para forzar la compatibilidad. El que Soundboard se ejecute en una nueva ventana puede producir una bajada en el rendimiento. Modificar esta configuración hará que se recargue el navegador"
+            }
+        },
+        "app": {
+            "title": "Mis Sonidos - SoundBoard by Jack",
+            "favTitle": "Sonidos Favoritos - SoundBoard by Jack",
+            "bundledTitle": "Sonidos Paquete Básico - SoundBoard by Jack",
+            "instructions": "Haga clic izquierdo para enviar un audio a los jugadores, botón derecho para que lo escuche únicamente el GM. Haga clic en los tres puntos para acceder a las opciones de los sonidos Favoritos y En Bucle. Haga clic en un audio en bucle para pararlo tras la reproducción actual. Haga clic en parar para detener todos los sonidos inmediatamente.",
+            "volume": "Volumen",
+            "filterText": "Buscar...",
+            "expandAll": "Expandir Todo",
+            "collapseAll": "Colapsar Todo",
+            "stopAll": "Parar",
+            "noBundledSoundsHeader": "¡No hay ningún paquete de sonido activo!",
+            "noBundledSoundsDesc": "Instale paquetes de sonido y actívelos mediante el gestor de paquetes de SoundBoard",
+            "exampleWarning": "No ha cambiado el directorio de SoundBoard por defecto exampleAudio. Si añade ficheros a ese directorio, serán borrados cuando se actualice el módulo. Haga clic en el botón de ayuda que hay en la parte superior derecha para saber como personalizar el audio",
+            "nav": {
+                "mySounds": "Mis Sonidos",
+                "favorites": "Sonidos Favoritos",
+                "bundled": "Sonidos Paquete Básico"
+            },
+            "toolbar": {
+                "target": "Enviar sonidos a un único jugador"
+            },
+            "tooltip": {
+                "target": "Selección de Jugador",
+                "cache": "Activar modo-caché",
+                "refresh": "Actualizar todos los sonidos",
+                "macro": "Alternar modo-macro",
+                "deleteMacros": "Borrar todas las macros de SoundBoard",
+                "openPackMan": "Abrir gestor de paquetes",
+                "help": "Abrir ayuda",
+                "volume": "Alternar modo de volumen"
+            },
+            "help": {
+                "title": "Ayuda de SoundBoard"
+            },
+            "packman": {
+                "title": "Gestor de paquetes de SoundBoard",
+                "installedPacksHeader": "Paquetes de sonido activados",
+                "installedPacksDesc": "Haga clic para activar/desactivar paquetes instalados",
+                "package": {
+                    "link": "Enlace",
+                    "licenseUnknown": "Desconocido"
+                },
+                "noPacksHeader": "No hay ningún paquete instalado",
+                "noPacksDesc": "Puede instalar el Blitz Free y otros paquetes de la comunidad buscando 'SoundBoard Pack' en el administrador de módulos"
+            }
+        },
+        "notif": {
+            "soundsNotLoaded": "Se están cargando sonidos, inténtelo más tarde",
+            "soundsError": "Error al cargar los sonidos. Compruebe el directorio de sonidos en los ajustes del módulo",
+            "interfaceMuted": "Suba el volumen de su interfaz para escuchar el audio de SoundBoard",
+            "refreshing": "Actualizando audio SoundBoard...",
+            "refreshComplete": "Actualización de SoundBoard completada con éxito",
+            "macroCreated": "Macro creada: {macro}",
+            "macroExists": "{macro} ya existe",
+            "deleteMacros": "Borradas todas las macros de SoundBoard",
+            "noMacros": "No hay macros de SoundBoard que borrar"
+        },
+        "whetstone": {
+            "theme": {
+                "default": {
+                    "title": "SoundBoard Por Defecto",
+                    "description": "Tema por defecto para SoundBoard, personalizable usando Whetstone"
+                }
+            },
+            "var": {
+                "loopbgfrom": {
+                    "title": "Activar Color de Fondo de Inicio de Bucle"
+                },
+                "loopbgto": {
+                    "title": "Activar Color de Fondo de Fin de Bucle",
+                    "hint": "Añadir animación entre colores de Inicio y de Fin"
+                },
+                "loopanimationtime": {
+                    "title": "Activar Tiempo de Animación de Bucle"
+                },
+                "loopactiveiconcolor": {
+                    "title": "Activar Color de Icono de Bucle",
+                    "hint": "Color para el icono de bucle en las opciones extendidas"
+                },
+                "looptextcolor": {
+                    "title": "Activar Color de Texto de Bucle",
+                    "hint": "Color del botón de texto para un objeto que esté siendo reproducido en bucle"
+                },
+                "favoritecolor": {
+                    "title": "Color para Favoritos",
+                    "hint": "Cambia tanto el color de la estrella de favoritos como el color del borde del botón"
+                },
+                "textshadow": {
+                    "title": "Sombra de Texto General"
+                },
+                "morebuttonactive": {
+                    "title": "Botón Más Activo",
+                    "hint": "Color del botón Más (tres puntos) cuando se pasa el ratón por encima de un botón de sonido"
+                },
+                "morebuttoninactive": {
+                    "title": "Botón Más Inactivo",
+                    "hint": "Color del botón Más (tres puntos) cuando no se pasa el ratón por encima de un botón de sonido"
+                },
+                "morebuttonhover": {
+                    "title": "Botón Más Al Pasar",
+                    "hint": "Color del botón Más (tres puntos) cuando se pasa el ratón por encima del botón con los tres puntos"
+                },
+                "extendedoptionsbg": {
+                    "title": "Opciones Extendidas de Fondo",
+                    "hint": "Color del diseño que se muestra cuando se hace clic en el botón Más con los tres puntos"
+                },
+                "extendedoptionsicon": {
+                    "title": "Opciones Extendidas de Iconos",
+                    "hint": "Color de los iconos para favoritos, bucle y retraso cuando no están activos"
+                },
+                "btntextsize": {
+                    "title": "Tamaño de Texto del Botón"
+                },
+                "volumetextcolor": {
+                    "title": "Color de Texto Volumen",
+                    "hint": "Color de la etiqueta de volumen en la parte inferior de SoundBoard"
+                },
+                "toolbarcolor": {
+                    "title": "Color de la Barra/Cuadro",
+                    "hint": "Color de la barra de herramientas, del cuadro donde está el volumen y la barra de encabezado"
+                },
+                "toolbarbtnactivecolor": {
+                    "title": "Color del Botón de la Barra Activa",
+                    "hint": "Color del botón de la barra de herramientas activa en ese momento (p.ej. si se activa Selección de Jugador)"
+                }
+            }
+        }
+    }
+}
