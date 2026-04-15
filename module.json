@@ -1,8 +1,8 @@
 {
-  "id": "SoundBoard",
+  "id": "Soundboard-by-Jack",
   "title": "SoundBoard by Jack",
   "description": "Simple soundboard for the Gamemaster, broadcasted to all connected clients.",
-  "version": "1.0.4",
+  "version": "1.0.8",
   "scripts": [
     "soundboard.js",
     "apps/soundboardapp.js",
@@ -53,5 +53,9 @@
     "minimum": "14",
     "verified": "14.360",
     "maximum": "14"
-  }
+  },
+  "url": "https://github.com/jacksands/Soundboard-by-Jack",
+  "manifest": "https://raw.githubusercontent.com/jacksands/Soundboard-by-Jack/refs/heads/main/module.json",
+  "download": "https://github.com/jacksands/Soundboard-by-Jack/archive/refs/heads/main.zip",
+  "bugs": "https://github.com/jacksands/Soundboard-by-Jack/issues"
 }

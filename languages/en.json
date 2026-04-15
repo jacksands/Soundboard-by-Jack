@@ -13,7 +13,7 @@
         "settings": {
             "directory": {
                 "name": "Custom SoundBoard Directory",
-                "hint": "This should point to a folder containing subfolders, each containing audio files. See modules/SoundBoard/exampleAudio/ for an example"
+                "hint": "This should point to a folder containing subfolders, each containing audio files. See modules/Soundboard-by-Jack/exampleAudio/ for an example"
             },
             "source": {
                 "name": "Source Type",

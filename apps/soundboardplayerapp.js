@@ -1,12 +1,11 @@
 /**
- * Personal SoundBoard for a specific player.
+ * Personal SoundBoard for players.
  *
- * Two modes (set by GM in settings):
- *  - 'folder'  : player points to their own folder (client setting), SoundBoard loads it
- *  - 'shared'  : player sees the same directory as the GM (read-only, play only)
- *
- * Players can only play (left-click) or preview (right-click).
- * No loop, cache, macro, or volume mode.
+ * Folder modes (set by GM in Player Manager):
+ *  'gm'       — player sees GM's current sounds (sent via socket)
+ *  'global'   — all players use one folder (playerSoundboardRootDir, set by GM)
+ *  'personal' — each player has their own folder (playerPersonalFolders[userId])
+ *               If allowPlayersAlterFolder: player can override via client setting
  */
 class SoundBoardPlayerApplication extends foundry.appv1.api.Application {
 
@@ -16,59 +15,80 @@ class SoundBoardPlayerApplication extends foundry.appv1.api.Application {
         this.sounds = {};
         this.loaded = false;
         this.error = false;
+        this.waitingForGM = false;
     }
 
     static get defaultOptions() {
         const options = super.defaultOptions;
         options.title = `🎵 ${game.i18n.localize('SOUNDBOARD.app.playerTitle')}`;
         options.id = 'soundboard-player-app';
-        options.template = 'modules/SoundBoard/templates/soundboardplayer.html';
+        options.template = 'modules/Soundboard-by-Jack/templates/soundboardplayer.html';
         options.resizable = true;
-        options.width = 520;
-        options.height = 560;
+        options.width = 600;
+        options.height = 600;
         return options;
     }
 
+    _getActiveDir() {
+        const mode = game.settings.get('SoundBoard', 'playerSoundboardMode') || 'gm';
+        if (mode === 'global') {
+            return game.settings.get('SoundBoard', 'playerSoundboardRootDir') || '';
+        }
+        if (mode === 'personal') {
+            const personalFolders = game.settings.get('SoundBoard', 'playerPersonalFolders') || {};
+            const assignedDir = personalFolders[this.userId] || '';
+            const allowAlter = game.settings.get('SoundBoard', 'allowPlayersAlterFolder') || false;
+            if (allowAlter) {
+                const playerOverride = game.settings.get('SoundBoard', 'playerSoundboardDirectory') || '';
+                return playerOverride || assignedDir;
+            }
+            return assignedDir;
+        }
+        return ''; // 'gm' mode — no dir
+    }
+
     async _loadSounds() {
-        const mode = game.settings.get('SoundBoard', 'playerSoundboardMode') || 'shared';
+        const mode = game.settings.get('SoundBoard', 'playerSoundboardMode') || 'gm';
         this.sounds = {};
+        this.error = false;
+        this.waitingForGM = false;
 
-        if (mode === 'shared') {
-            // Use the same sounds as the GM
-            this.sounds = SoundBoard.sounds;
+        if (mode === 'gm') {
+            this.sounds = SoundBoard.sounds || {};
+            if (Object.keys(this.sounds).length === 0 && !game.user.isGM) {
+                this.waitingForGM = true;
+                SoundBoard._requestSoundsFromGM();
+            }
             this.loaded = true;
             return;
         }
 
-        // 'folder' mode: each player has their own directory (client setting)
-        const dir = game.settings.get('SoundBoard', 'playerSoundboardDirectory') || '';
+        const dir = this._getActiveDir();
         if (!dir) {
-            this.error = true;
+            this.error = 'nodir';
             this.loaded = true;
             return;
         }
 
+        const EXTS = ['.ogg', '.oga', '.mp3', '.wav', '.flac', '.webm', '.opus'];
         try {
             const source = game.settings.get('SoundBoard', 'source') || 'data';
             const dirArray = await FilePicker.browse(source, dir);
-            const EXTS = ['.ogg', '.oga', '.mp3', '.wav', 'flac', '.webm', '.opus'];
 
             for (const subDir of dirArray.dirs) {
                 const catName = SoundBoard._formatName(subDir.split(/[/]+/).pop(), false);
                 this.sounds[catName] = [];
                 const inner = await FilePicker.browse(source, subDir);
-
                 for (const wildcardDir of inner.dirs) {
-                    const files = (await FilePicker.browse(source, wildcardDir)).files
-                        .filter(f => EXTS.some(e => f.endsWith(e)));
-                    if (files.length) this.sounds[catName].push({
+                    const wFiles = (await FilePicker.browse(source, wildcardDir)).files
+                        .filter(f => EXTS.some(e => f.toLowerCase().endsWith(e)));
+                    if (wFiles.length) this.sounds[catName].push({
                         name: SoundBoard._formatName(wildcardDir.split(/[/]+/).pop(), false),
-                        src: files, identifyingPath: wildcardDir, isWild: true
+                        src: wFiles, identifyingPath: wildcardDir, isWild: true
                     });
                 }
-
                 for (const file of inner.files) {
-                    if (EXTS.some(e => file.endsWith(e))) {
+                    if (EXTS.some(e => file.toLowerCase().endsWith(e))) {
                         this.sounds[catName].push({
                             name: SoundBoard._formatName(file.split(/[/]+/).pop()),
                             src: [file], identifyingPath: file, isWild: false
@@ -76,10 +96,20 @@ class SoundBoardPlayerApplication extends foundry.appv1.api.Application {
                     }
                 }
             }
+
+            // Root-level audio files → "General" category
+            const rootFiles = (dirArray.files || []).filter(f => EXTS.some(e => f.toLowerCase().endsWith(e)));
+            if (rootFiles.length) {
+                this.sounds['General'] = rootFiles.map(f => ({
+                    name: SoundBoard._formatName(f.split(/[/]+/).pop()),
+                    src: [f], identifyingPath: f, isWild: false
+                }));
+            }
+
             this.loaded = true;
         } catch(e) {
-            SoundBoard.log(`PlayerSoundBoard load error: ${e}`, SoundBoard.LOGTYPE.ERR);
-            this.error = true;
+            SoundBoard.log(`PlayerSoundBoard error: ${e}`, SoundBoard.LOGTYPE.ERR);
+            this.error = 'loadfail';
             this.loaded = true;
         }
     }
@@ -87,22 +117,59 @@ class SoundBoardPlayerApplication extends foundry.appv1.api.Application {
     async getData() {
         await this._loadSounds();
         const volume = game.settings.get('SoundBoard', 'soundboardServerVolume');
-        const mode = game.settings.get('SoundBoard', 'playerSoundboardMode') || 'shared';
-        const dir = game.settings.get('SoundBoard', 'playerSoundboardDirectory') || '';
+        const mode = game.settings.get('SoundBoard', 'playerSoundboardMode') || 'gm';
+        const activeDir = this._getActiveDir();
         const totalCount = Object.values(this.sounds).reduce((s, a) => s + a.length, 0);
+        const allowAlter = game.settings.get('SoundBoard', 'allowPlayersAlterFolder') || false;
+        const playerOverride = game.settings.get('SoundBoard', 'playerSoundboardDirectory') || '';
 
         const categories = Object.keys(this.sounds)
             .filter(k => this.sounds[k].length > 0)
             .map(k => ({ categoryName: k, files: this.sounds[k] }));
 
-        return { categories, volume, totalCount, error: this.error, mode, dir, isGM: game.user.isGM };
+        return {
+            categories, volume, totalCount,
+            error: this.error, mode, activeDir, allowAlter, playerOverride,
+            waitingForGM: this.waitingForGM,
+            isGM: game.user.isGM,
+            gmRootDir: game.settings.get('SoundBoard', 'playerSoundboardRootDir') || ''
+        };
     }
 
     activateListeners(html) {
         super.bringToTop();
         const el = html instanceof HTMLElement ? html : html[0];
 
-        // Directory picker for folder mode
+        // ---- Sound buttons: left-click = broadcast, right-click = local preview ----
+        el.querySelectorAll('.sb-player-btn[data-src]').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const src = decodeURIComponent(btn.dataset.src);
+                SoundBoard.playAudioPath(src, true);   // push=true: broadcast to all
+            });
+            btn.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                const src = decodeURIComponent(btn.dataset.src);
+                SoundBoard.playAudioPath(src, false);  // push=false: local preview only
+            });
+        });
+
+        // ---- Reload / re-request sounds ----
+        el.querySelector('#player-refresh')?.addEventListener('click', () => {
+            const mode = game.settings.get('SoundBoard', 'playerSoundboardMode') || 'gm';
+            if (mode === 'gm' && !game.user.isGM) SoundBoard._requestSoundsFromGM();
+            setTimeout(() => this.render(), 800);
+        });
+
+        // ---- Expand / Collapse All ----
+        el.querySelector('#player-expand-all')?.addEventListener('click', () => {
+            el.querySelectorAll('.sb-collapse-div').forEach(d => d.style.display = '');
+        });
+        el.querySelector('#player-collapse-all')?.addEventListener('click', () => {
+            el.querySelectorAll('.sb-collapse-div').forEach(d => d.style.display = 'none');
+        });
+
+        // ---- Player folder override (when allowPlayersAlterFolder is true) ----
         el.querySelector('#player-dir-pick')?.addEventListener('click', () => {
             new FilePicker({
                 type: 'folder',
@@ -112,15 +179,24 @@ class SoundBoardPlayerApplication extends foundry.appv1.api.Application {
                 }
             }).render(true);
         });
+        el.querySelector('#player-dir-clear')?.addEventListener('click', () => {
+            game.settings.set('SoundBoard', 'playerSoundboardDirectory', '');
+            this.render();
+        });
 
-        // Search filter
+        // ---- Volume slider ----
+        el.querySelector('#player-volume-slider')?.addEventListener('change', function() {
+            SoundBoard.updateVolume(this.value);
+        });
+
+        // ---- Search filter ----
         let ft;
         el.querySelector('#player-sound-search')?.addEventListener('keyup', function () {
             clearTimeout(ft);
             ft = setTimeout(() => {
                 const v = this.value.toLowerCase();
                 el.querySelectorAll('.sb-player-btn').forEach(b => {
-                    b.style.display = b.textContent.toLowerCase().includes(v) ? '' : 'none';
+                    b.style.display = (b.getAttribute('title') || '').toLowerCase().includes(v) ? '' : 'none';
                 });
                 el.querySelectorAll('.sb-player-category').forEach(cat => {
                     const hasVisible = [...cat.querySelectorAll('.sb-player-btn')].some(b => b.style.display !== 'none');
@@ -129,7 +205,7 @@ class SoundBoardPlayerApplication extends foundry.appv1.api.Application {
             }, 300);
         });
 
-        // Collapse toggles
+        // ---- Category collapse toggles ----
         el.querySelectorAll('.sb-player-cat-header').forEach(h => {
             h.addEventListener('click', () => {
                 const body = h.nextElementSibling;
@@ -140,8 +216,7 @@ class SoundBoardPlayerApplication extends foundry.appv1.api.Application {
 }
 
 /**
- * GM Player SoundBoard Manager
- * Controls access and mode (shared/folder).
+ * GM Player SoundBoard Manager — 3 folder modes + per-player folder
  */
 class SoundBoardPlayerManagerApplication extends foundry.appv1.api.Application {
 
@@ -149,23 +224,29 @@ class SoundBoardPlayerManagerApplication extends foundry.appv1.api.Application {
         const options = super.defaultOptions;
         options.title = '👥 Player SoundBoard Manager';
         options.id = 'soundboard-player-manager';
-        options.template = 'modules/SoundBoard/templates/soundboardplayermanager.html';
+        options.template = 'modules/Soundboard-by-Jack/templates/soundboardplayermanager.html';
         options.resizable = true;
-        options.width = 500;
-        options.height = 520;
+        options.width = 520;
+        options.height = 600;
         return options;
     }
 
     getData() {
         const players = game.users.contents.filter(u => !u.isGM);
         const allowed = game.settings.get('SoundBoard', 'playersWithSoundboard') || [];
-        const mode = game.settings.get('SoundBoard', 'playerSoundboardMode') || 'shared';
+        const mode = game.settings.get('SoundBoard', 'playerSoundboardMode') || 'gm';
         const gmDir = game.settings.get('SoundBoard', 'soundboardDirectory') || '';
+        const gmRootDir = game.settings.get('SoundBoard', 'playerSoundboardRootDir') || '';
+        const personalFolders = game.settings.get('SoundBoard', 'playerPersonalFolders') || {};
+        const allowAlter = game.settings.get('SoundBoard', 'allowPlayersAlterFolder') || false;
 
         return {
-            players: players.map(p => ({ id: p.id, name: p.name, hasAccess: allowed.includes(p.id) })),
-            mode,
-            gmDir
+            players: players.map(p => ({
+                id: p.id, name: p.name,
+                hasAccess: allowed.includes(p.id),
+                personalDir: personalFolders[p.id] || ''
+            })),
+            mode, gmDir, gmRootDir, allowAlter
         };
     }
 
@@ -173,9 +254,48 @@ class SoundBoardPlayerManagerApplication extends foundry.appv1.api.Application {
         super.bringToTop();
         const el = html instanceof HTMLElement ? html : html[0];
 
-        // Mode select
-        el.querySelector('#pm-mode-select')?.addEventListener('change', function () {
-            game.settings.set('SoundBoard', 'playerSoundboardMode', this.value);
+        // Mode radio buttons
+        el.querySelectorAll('input[name="pm-mode"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                game.settings.set('SoundBoard', 'playerSoundboardMode', radio.value);
+            });
+        });
+
+        // GM sets global folder
+        el.querySelector('#pm-global-dir-pick')?.addEventListener('click', () => {
+            new FilePicker({
+                type: 'folder',
+                callback: path => {
+                    game.settings.set('SoundBoard', 'playerSoundboardRootDir', path);
+                    this.render();
+                }
+            }).render(true);
+        });
+
+        // Per-player folder pickers
+        el.querySelectorAll('.pm-player-dir-pick').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const uid = btn.dataset.userId;
+                new FilePicker({
+                    type: 'folder',
+                    callback: path => {
+                        const pf = { ...(game.settings.get('SoundBoard', 'playerPersonalFolders') || {}) };
+                        pf[uid] = path;
+                        game.settings.set('SoundBoard', 'playerPersonalFolders', pf);
+                        this.render();
+                    }
+                }).render(true);
+            });
+        });
+
+        el.querySelectorAll('.pm-player-dir-clear').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const uid = btn.dataset.userId;
+                const pf = { ...(game.settings.get('SoundBoard', 'playerPersonalFolders') || {}) };
+                delete pf[uid];
+                game.settings.set('SoundBoard', 'playerPersonalFolders', pf);
+                this.render();
+            });
         });
 
         // Toggle player access
@@ -186,11 +306,9 @@ class SoundBoardPlayerManagerApplication extends foundry.appv1.api.Application {
                 const idx = allowed.indexOf(uid);
                 if (idx === -1) allowed.push(uid); else allowed.splice(idx, 1);
                 game.settings.set('SoundBoard', 'playersWithSoundboard', allowed);
-                btn.classList.toggle('active');
                 const hasAccess = allowed.includes(uid);
                 btn.textContent = hasAccess ? '✓ Has Access' : '✗ No Access';
                 btn.className = `btn btn-sm sb-pm-access-toggle ${hasAccess ? 'btn-success' : 'btn-outline-secondary'}`;
-                btn.dataset.userId = uid;
             });
         });
     }

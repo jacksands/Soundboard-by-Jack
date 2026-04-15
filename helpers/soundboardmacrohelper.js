@@ -15,7 +15,7 @@ class SBMacroHelper {
                 name: macroName,
                 command: `SoundBoard.playSoundByName("${soundName}");\n// SHIFT CLICK this macro to cache the sound, click to play it`,
                 type: 'script',
-                img: 'modules/SoundBoard/bundledDocs/sbmacro.png'
+                img: 'modules/Soundboard-by-Jack/bundledDocs/sbmacro.png'
             });
             ui.notifications.notify(game.i18n.localize('SOUNDBOARD.notif.macroCreated', {macro: macroName}));
         }

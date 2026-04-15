@@ -4,7 +4,7 @@ class SoundBoardHelp extends foundry.appv1.api.Application {
         const options = super.defaultOptions;
         options.title = `❔${game.i18n.localize('SOUNDBOARD.app.help.title')}`;
         options.id = 'soundboard-help-app';
-        options.template = 'modules/SoundBoard/templates/soundboardhelp.html';
+        options.template = 'modules/Soundboard-by-Jack/templates/soundboardhelp.html';
         options.resizable = true;
         options.width = 460;
         options.height = 640;

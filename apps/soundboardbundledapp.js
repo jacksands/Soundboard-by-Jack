@@ -3,7 +3,7 @@ class SoundBoardBundledApplication extends SoundBoardApplication {
     static get defaultOptions() {
         const options = super.defaultOptions;
         options.title = `📦${game.i18n.localize('SOUNDBOARD.app.bundledTitle')}`;
-        options.template = 'modules/SoundBoard/templates/soundboard.html';
+        options.template = 'modules/Soundboard-by-Jack/templates/soundboard.html';
         return options;
     }
 

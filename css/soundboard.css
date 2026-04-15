@@ -415,3 +415,19 @@ input[type=range].sb-individual-volume::-webkit-slider-thumb {
   border-radius: 3px;
   vertical-align: middle;
 }
+
+/* Name truncation mode — limits button height to 1 line */
+#soundboard-app .btn[uuid].sb-truncated {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: 36px;
+  line-height: 1.2;
+  display: block;
+}
+
+/* Native title tooltip appears fast — no CSS needed, browser handles it.
+   Force it to appear quickly via CSS (works in Chrome/Edge) */
+#soundboard-app .btn[uuid] {
+  cursor: pointer;
+}

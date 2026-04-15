@@ -52,6 +52,28 @@
         root.querySelector('#sb-font-plus')?.addEventListener('click',  () => applyFont(currentFont + 0.1));
         applyFont(currentFont);
 
+        // --- Name truncation toggle (character-limit based) ---
+        const TRUNC_KEY = 'SoundBoardModule.truncateNames';
+        let truncateActive = localStorage.getItem(TRUNC_KEY) === 'true';
+
+        function applyTruncate(active) {
+            truncateActive = active;
+            localStorage.setItem(TRUNC_KEY, active);
+            const btn = root.querySelector('#sb-truncate-toggle');
+            btn?.classList.toggle('active', active);
+            const maxChars = game.settings.get('SoundBoard', 'buttonNameMaxChars') || 15;
+            root.querySelectorAll('.sb-btn-name').forEach(span => {
+                const full = span.dataset.fullName || span.textContent;
+                if (!span.dataset.fullName) span.dataset.fullName = span.textContent;
+                span.textContent = active && full.length > maxChars
+                    ? full.slice(0, maxChars) + '…'
+                    : full;
+            });
+        }
+
+        root.querySelector('#sb-truncate-toggle')?.addEventListener('click', () => applyTruncate(!truncateActive));
+        applyTruncate(truncateActive);
+
         // --- Search/filter ---
         let filterTimeout;
         root.querySelector('#sound-search')?.addEventListener('keyup', function () {
@@ -123,12 +145,12 @@
         <button id="sb-font-plus" type="button" class="btn btn-secondary toolbar-btn" title="Increase font size">
             <i class="fas fa-plus"></i>
         </button>
-        <!-- Right Side -->
-        <button id="delete-macros" type="button" class="btn btn-danger toolbar-btn ml-auto"
-                title="{{localize 'SOUNDBOARD.app.tooltip.deleteMacros'}}" onclick="SoundBoard.promptDeleteMacros()">
-            <i class="fas fa-bomb"></i>
+        <!-- Name truncation toggle -->
+        <button id="sb-truncate-toggle" type="button" class="btn btn-secondary toolbar-btn" title="Toggle name truncation (limits button height)">
+            <i class="fas fa-text-width"></i>
         </button>
-        <button id="open-packman" type="button" class="btn btn-secondary toolbar-btn"
+        <!-- Right Side (delete macros moved to Module Settings) -->
+        <button id="open-packman" type="button" class="btn btn-secondary toolbar-btn ml-auto"
                 title="{{localize 'SOUNDBOARD.app.tooltip.openPackMan'}}"
                 onclick="SoundBoard.openSoundBoardPackageManager(SoundBoard.packageManager)">
             <i class="fas fa-tasks"></i>
@@ -204,13 +226,13 @@
                 {{#each files}}
                 {{#if isWild}}
                 <div class="btn btn-outline-info col{{#if isLoop}} loop-active{{/if}}{{#if isFavorite}} favorited{{/if}}"
-                     uuid="{{identifyingPath}}">
-                    {{name}}
+                     uuid="{{identifyingPath}}" title="{{name}}">
+                    <span class="sb-btn-name">{{name}}</span>
                     <span class="badge badge-light">{{soundboard-getarraycount src}}</span>
                     {{else}}
                     <div class="btn btn-outline-dark col{{#if isLoop}} loop-active{{/if}}{{#if isFavorite}} favorited{{/if}}"
-                         uuid="{{identifyingPath}}">
-                        {{name}}
+                         uuid="{{identifyingPath}}" title="{{name}}">
+                        <span class="sb-btn-name">{{name}}</span>
                         {{/if}}
                         <button class="sb-play-button" onclick="SoundBoard.playSoundOrStopLoop('{{soundboard-escape identifyingPath}}')"
                                 oncontextmenu="SoundBoard.previewSound('{{soundboard-escape identifyingPath}}'); return false;"></button>

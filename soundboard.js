@@ -417,19 +417,14 @@ class SoundBoard {
         document.querySelectorAll(`#soundboard-app .btn[uuid="${CSS.escape(identifyingPath)}"]`).forEach(btn => btn.classList.remove('favorited'));
     }
 
-    static startLoop(identifyingPath, loopMode = 'fixed', delayMin = 5, delayMax = 5) {
+    static startLoop(identifyingPath, loopMode = 'simple', delayMin = 0, delayMax = 0) {
         let sound = SoundBoard.getSoundFromIdentifyingPath(identifyingPath);
         if (sound.loop) return;
         sound.loop = true;
-        sound.loopMode = loopMode;   // 'fixed' | 'random'
+        sound.loopMode = loopMode;
         sound.loopDelayMin = Number(delayMin) || 0;
         sound.loopDelayMax = Number(delayMax) || 0;
-        // loopDelay kept for compat: stores fixed value or will be recalculated randomly
-        if (loopMode === 'fixed') {
-            sound.loopDelay = sound.loopDelayMin;
-        } else {
-            sound.loopDelay = 0; // will be computed each cycle in audioHelper
-        }
+        sound.loopDelay = 0;
         SoundBoard.playSound(identifyingPath);
         document.querySelectorAll(`#soundboard-app .btn[uuid="${CSS.escape(identifyingPath)}"]`).forEach(btn => btn.classList.add('loop-active'));
     }
@@ -480,13 +475,15 @@ class SoundBoard {
     }
 
     static stopAllSounds() {
+        // Mark all sounds as not looping BEFORE calling stopAll,
+        // so the 'stop' event handler in audioHelper sees loop=false
+        // and doesn't try to trigger another cycle.
+        SoundBoard.updateAllSounds('loop', false);
+        SoundBoard.updateAllSounds('loopMode', 'off');
         SoundBoard.audioHelper.stopAll();
         SoundBoard.socketHelper.sendData({
             type: SBSocketHelper.SOCKETMESSAGETYPE.STOPALL
         });
-        SoundBoard.audioHelper.delayIntervals.clearAll();
-        SoundBoard.updateAllSounds('loop', false);
-        SoundBoard.updateAllSounds('loopMode', 'off');
         document.querySelectorAll('#soundboard-app .btn').forEach(btn => btn.classList.remove('loop-active'));
     }
 
@@ -886,7 +883,7 @@ class SoundBoard {
         );
         const command = lines.join('\n');
         Macro.create({ name: `Soundscape - ${name}`, type: 'script', command,
-            img: 'modules/SoundBoard/bundledDocs/sbmacro.png' })
+            img: 'modules/Soundboard-by-Jack/bundledDocs/sbmacro.png' })
             .then(m => ui.notifications.notify(`Macro "Soundscape - ${name}" created.`));
     }
 
@@ -962,6 +959,11 @@ class SoundBoard {
         });
     }
 
+    static _applySimpleLoop(identifyingPath, btnEl) {
+        SoundBoard.setLoopMode(identifyingPath, 'simple', 0, 0);
+        SoundBoardApplication.toggleExtendedOptions(btnEl);
+    }
+
     static _applyFixedLoop(identifyingPath, btnEl) {
         const safeId = identifyingPath.replace(/[^a-z0-9]/gi, '_');
         const input = document.getElementById(`sb-fixed-delay-${safeId}`);
@@ -980,56 +982,105 @@ class SoundBoard {
         SoundBoardApplication.toggleExtendedOptions(btnEl);
     }
 
+    // ---- Direct audio path play (for player board, bypasses sound registry) ----
+
+    static async playAudioPath(src, push = true) {
+        if (!SoundBoard.audioHelper) return;
+        const volume = SoundBoard.getVolume();
+        const soundObj = {
+            loop: false, loopMode: 'off',
+            identifyingPath: src, individualVolume: 1,
+            src: [src]
+        };
+        const payload = { src, volume, detune: 0 };
+        SoundBoard.audioHelper.play(payload, soundObj);
+        if (push) {
+            SoundBoard.socketHelper.sendData({
+                type: SBSocketHelper.SOCKETMESSAGETYPE.PLAY,
+                payload,
+                soundExtras: { identifyingPath: src, individualVolume: 1 }
+            });
+        }
+    }
+
     // ---- Player Personal Soundboard ----
+
+    // Called when GM sends sound data back to player
+    static _onSoundsDataReceived({ sounds, bundledSounds }) {
+        SoundBoard.sounds = sounds || {};
+        SoundBoard.bundledSounds = bundledSounds || {};
+        SoundBoard.soundsLoaded = true;
+        // If player board is open, re-render it
+        const board = ui.windows[Object.keys(ui.windows).find(k => ui.windows[k].id === 'soundboard-player-app')];
+        if (board?.rendered) board.render();
+    }
+
+    // Player requests the GM's sound list via socket
+    static _requestSoundsFromGM() {
+        SoundBoard.socketHelper.sendData({
+            type: SBSocketHelper.SOCKETMESSAGETYPE.REQUESTSOUNDS,
+            requesterId: game.user.id
+        });
+    }
 
     static openPlayerSoundBoard() {
         const userId = game.user.id;
-        const allowed = game.settings.get('SoundBoard', 'playersWithSoundboard') || [];
-        if (!game.user.isGM && !allowed.includes(userId)) {
-            ui.notifications.warn('You do not have access to a personal SoundBoard.');
-            return;
+        if (!game.user.isGM) {
+            const allowed = game.settings.get('SoundBoard', 'playersWithSoundboard') || [];
+            if (!allowed.includes(userId)) {
+                ui.notifications.warn('You do not have access to a personal SoundBoard.');
+                return;
+            }
+        }
+        const mode = game.settings.get('SoundBoard', 'playerSoundboardMode') || 'gm';
+        // In gm mode, request sounds from GM via socket if not yet loaded
+        if (mode === 'gm' && !SoundBoard.soundsLoaded && !game.user.isGM) {
+            SoundBoard._requestSoundsFromGM();
         }
         new SoundBoardPlayerApplication(userId).render(true);
     }
 
-    static async onReady() {
-        SoundBoard.packageManager = new SBPackageManager();
-        Hooks.callAll('SBPackageManagerReady');
+
+    static _registerSettings() {
+        game.settings.registerMenu('SoundBoard', 'deleteMacrosMenu', {
+            name: 'Delete All SoundBoard Macros',
+            label: 'Delete Macros',
+            hint: 'Remove all automatically generated SoundBoard macros from your Macro Directory.',
+            icon: 'fas fa-bomb',
+            type: SBDeleteMacrosMenu,
+            restricted: true
+        });
 
         game.settings.register('SoundBoard', 'soundboardDirectory', {
-            name: game.i18n.localize('SOUNDBOARD.settings.directory.name'),
-            hint: game.i18n.localize('SOUNDBOARD.settings.directory.hint'),
+            name: 'Custom SoundBoard Directory',
+            hint: 'This should point to a folder containing subfolders, each containing audio files. See modules/Soundboard-by-Jack/exampleAudio/ for an example',
             scope: 'world',
             config: true,
-            default: 'modules/SoundBoard/exampleAudio',
+            default: 'modules/Soundboard-by-Jack/exampleAudio',
             type: String,
             filePicker: 'folder',
             onChange: value => {
                 if (value.length <= 0) {
-                    game.settings.set('SoundBoard', 'soundboardDirectory', 'modules/SoundBoard/exampleAudio');
+                    game.settings.set('SoundBoard', 'soundboardDirectory', 'modules/Soundboard-by-Jack/exampleAudio');
                 }
-                SoundBoard.getSounds(true);
+                if (SoundBoard.audioHelper) SoundBoard.getSounds(true);
             }
         });
 
         game.settings.register('SoundBoard', 'source', {
-            name: game.i18n.localize('SOUNDBOARD.settings.source.name'),
-            hint: game.i18n.localize('SOUNDBOARD.settings.source.hint'),
+            name: 'Source Type',
+            hint: 'If your sounds are stored in your Forge Assets, select Forge. If they are stored in an S3 bucket, select S3. Otherwise, select Data',
             scope: 'world',
             config: true,
             type: String,
-            choices: {
-                'data': game.i18n.localize('SOUNDBOARD.settings.source.data'),
-                'forgevtt': game.i18n.localize('SOUNDBOARD.settings.source.forgevtt'),
-                's3': game.i18n.localize('SOUNDBOARD.settings.source.s3')
-            },
+            choices: { 'data': 'Data', 'forgevtt': 'Forge', 's3': 'S3' },
             default: 'data',
-            onChange: value => { SoundBoard.getSounds(true); }
+            onChange: value => { if (SoundBoard.audioHelper) SoundBoard.getSounds(true); }
         });
 
         game.settings.register('SoundBoard', 'opacity', {
-            name: game.i18n.localize('SOUNDBOARD.settings.opacity.name'),
-            hint: game.i18n.localize('SOUNDBOARD.settings.opacity.hint'),
+            name: 'Defocus Opacity',
+            hint: 'Set the opacity of the SoundBoard when you are not hovering over it. 1 to disable.',
             scope: 'world',
             config: true,
             type: Number,
@@ -1042,8 +1093,8 @@ class SoundBoard {
         });
 
         game.settings.register('SoundBoard', 'detuneAmount', {
-            name: game.i18n.localize('SOUNDBOARD.settings.detune.name'),
-            hint: game.i18n.localize('SOUNDBOARD.settings.detune.hint'),
+            name: 'Random Detune Amount',
+            hint: 'Randomly detune a sound each time it plays. 0 to disable.',
             scope: 'world',
             config: true,
             type: Number,
@@ -1051,9 +1102,19 @@ class SoundBoard {
             default: 0
         });
 
+        game.settings.register('SoundBoard', 'buttonNameMaxChars', {
+            name: 'Button Name Max Characters',
+            hint: 'Maximum characters shown on sound buttons when name truncation is active. Range: 5-50.',
+            scope: 'world',
+            config: true,
+            type: Number,
+            range: { min: 5, max: 50, step: 1 },
+            default: 15
+        });
+
         game.settings.register('SoundBoard', 'allowPlayersMacroRequest', {
-            name: game.i18n.localize('SOUNDBOARD.settings.macroRequest.name'),
-            hint: game.i18n.localize('SOUNDBOARD.settings.macroRequest.hint'),
+            name: 'Players trigger SoundBoard macros',
+            hint: 'Enable this to allow players to trigger a sound using a macro with SoundBoard.playSoundByName()',
             scope: 'world',
             config: true,
             type: Boolean,
@@ -1061,53 +1122,13 @@ class SoundBoard {
         });
 
         game.settings.register('SoundBoard', 'forcePopoutCompat', {
-            name: game.i18n.localize('SOUNDBOARD.settings.popoutCompat.name'),
-            hint: game.i18n.localize('SOUNDBOARD.settings.popoutCompat.hint'),
+            name: 'Force Popout Compatibility',
+            hint: 'Enable this if you are having issues with the SoundBoard being cut off by the edge of the screen.',
             scope: 'world',
             config: true,
             type: Boolean,
             default: false,
             onChange: value => { window.location.reload(); }
-        });
-
-        game.settings.register('SoundBoard', 'soundboardServerVolume', {
-            name: 'Server Volume',
-            scope: 'world',
-            config: false,
-            type: Number,
-            default: 100
-        });
-
-        game.settings.register('SoundBoard', 'soundboardIndividualSoundVolumes', {
-            name: 'Server Volume',
-            scope: 'world',
-            config: false,
-            type: Object,
-            default: {}
-        });
-
-        game.settings.register('SoundBoard', 'favoritedSounds', {
-            name: 'Favorited Sounds',
-            scope: 'world',
-            config: false,
-            default: []
-        });
-
-        game.settings.register('SoundBoard', 'savedSoundscapes', {
-            name: 'Saved Soundscapes',
-            scope: 'world',
-            config: false,
-            type: Object,
-            default: {}
-        });
-
-        game.settings.register('SoundBoard', 'playersWithSoundboard', {
-            name: 'Players with Personal SoundBoard',
-            hint: 'List of player user IDs that can open their own SoundBoard (set via the Player Soundboard manager).',
-            scope: 'world',
-            config: false,
-            type: Array,
-            default: []
         });
 
         game.settings.register('SoundBoard', 'allowPlayersPersonalSoundboard', {
@@ -1119,24 +1140,51 @@ class SoundBoard {
             default: false
         });
 
-        game.settings.register('SoundBoard', 'playerSoundboardMode', {
-            name: 'Player SoundBoard Mode',
-            hint: '"shared" = players use GM folder. "folder" = each player sets their own folder.',
+        game.settings.register('SoundBoard', 'allowPlayersAlterFolder', {
+            name: 'Allow Players to Set Their Own Folder',
+            hint: 'If enabled, players can override their assigned folder from within their personal SoundBoard window.',
             scope: 'world',
-            config: false,
-            type: String,
-            default: 'shared'
+            config: true,
+            type: Boolean,
+            default: false
         });
 
-        // Per-player personal folder (client scope so each player sets their own)
-        game.settings.register('SoundBoard', 'playerSoundboardDirectory', {
-            name: 'My SoundBoard Folder',
-            hint: 'Your personal sounds folder. Set this in your SoundBoard window.',
-            scope: 'client',
-            config: false,
-            type: String,
-            default: ''
+        // Hidden/internal settings (config: false)
+        game.settings.register('SoundBoard', 'soundboardServerVolume', {
+            name: 'Server Volume', scope: 'world', config: false, type: Number, default: 100
         });
+        game.settings.register('SoundBoard', 'soundboardIndividualSoundVolumes', {
+            name: 'Individual Sound Volumes', scope: 'world', config: false, type: Object, default: {}
+        });
+        game.settings.register('SoundBoard', 'favoritedSounds', {
+            name: 'Favorited Sounds', scope: 'world', config: false, default: []
+        });
+        game.settings.register('SoundBoard', 'savedSoundscapes', {
+            name: 'Saved Soundscapes', scope: 'world', config: false, type: Object, default: {}
+        });
+        game.settings.register('SoundBoard', 'playersWithSoundboard', {
+            name: 'Players with Personal SoundBoard', scope: 'world', config: false, type: Array, default: []
+        });
+        game.settings.register('SoundBoard', 'playerSoundboardMode', {
+            name: 'Player SoundBoard Mode', scope: 'world', config: false, type: String, default: 'gm'
+        });
+        game.settings.register('SoundBoard', 'playerSoundboardRootDir', {
+            name: 'Player SoundBoard Root Folder', scope: 'world', config: false, type: String, default: ''
+        });
+        game.settings.register('SoundBoard', 'playerPersonalFolders', {
+            name: 'Player Personal Folder Assignments', scope: 'world', config: false, type: Object, default: {}
+        });
+        game.settings.register('SoundBoard', 'playerSoundboardDirectory', {
+            name: 'My SoundBoard Folder', scope: 'client', config: false, type: String, default: ''
+        });
+    }
+
+    static async onReady() {
+        SoundBoard.packageManager = new SBPackageManager();
+        Hooks.callAll('SBPackageManagerReady');
+
+        // Note: all game.settings.register() calls happen in init hook (_registerSettings)
+        // onReady only loads sounds and sets up runtime state
 
         // V14: Hook into clientSettingChanged for globalInterfaceVolume
         Hooks.on('clientSettingChanged', (key, value) => {
@@ -1151,7 +1199,7 @@ class SoundBoard {
         if (game.user.isGM) {
             SoundBoard.soundsError = false;
             await SoundBoard.getSounds();
-            Handlebars.registerPartial('SoundBoardPackageCard', await getTemplate('modules/SoundBoard/templates/partials/packagecard.hbs'));
+            Handlebars.registerPartial('SoundBoardPackageCard', await getTemplate('modules/Soundboard-by-Jack/templates/partials/packagecard.hbs'));
         }
 
         SoundBoard.socketHelper = new SBSocketHelper();
@@ -1200,9 +1248,24 @@ Hooks.on('closeSoundBoardApplication', () => {
 // V14: settings must be registered in 'init', but getSounds needs 'ready'
 // Split: register settings in init, load sounds in ready
 Hooks.once('init', () => {
-    // Register Handlebars helpers early so templates work
-    // (actual settings registered in onReady because they use game.i18n)
+    // All settings registered here so Foundry maps them correctly
+    // and shows Save Changes / requires reload prompts properly.
+    SoundBoard._registerSettings();
 });
+
+// Settings menu class for delete macros (follows LEARNINGS #004 pattern)
+class SBDeleteMacrosMenu extends foundry.applications.api.ApplicationV2 {
+    static DEFAULT_OPTIONS = {
+        id: 'sb-delete-macros-menu',
+        window: { title: 'Delete SoundBoard Macros' }
+    };
+    async _renderHTML() { return null; }
+    async _replaceHTML() {}
+    async _onRender() {
+        this.close({ animate: false });
+        SoundBoard.promptDeleteMacros();
+    }
+}
 
 Hooks.once('ready', SoundBoard.onReady);
 Hooks.on('getSceneControlButtons', SoundBoard.addSoundBoard);

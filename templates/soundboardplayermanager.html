@@ -1,42 +1,78 @@
-<div style="padding:14px;font-size:13px;">
+<div style="padding:14px 16px;font-size:13px;overflow-y:auto;max-height:100%;">
 
-    <h3 style="margin:0 0 6px;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:1px;">Sound Mode</h3>
-    <div style="background:#f0f0f0;border-radius:6px;padding:10px 12px;margin-bottom:14px;">
-        <p style="font-size:11px;color:#555;margin:0 0 8px;">
-            ℹ️ Players always hear sounds played by the GM. This setting only controls <b>which sounds players can trigger themselves</b>.
-        </p>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:6px;">
-            <input type="radio" name="pm-mode" id="pm-mode-select" value="shared"
-                   {{#if (eq mode 'shared')}}checked{{/if}}
-                   onchange="game.settings.set('SoundBoard','playerSoundboardMode','shared')">
+    <h3 style="margin:0 0 4px;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #c00;padding-bottom:3px;">Sound Source Mode</h3>
+    <p style="font-size:11px;color:#555;margin:4px 0 10px;">
+        ℹ️ Players always hear sounds the GM broadcasts. This controls which sounds <b>players can trigger themselves</b>.
+    </p>
+
+    <!-- Mode 1: GM Folder -->
+    <div style="background:#f5f5f5;border-radius:6px;padding:8px 12px;margin-bottom:6px;border:2px solid {{#if (eq mode 'gm')}}#4a90d9{{else}}transparent{{/if}};">
+        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;margin:0;">
+            <input type="radio" name="pm-mode" value="gm"
+                   {{#if (eq mode 'gm')}}checked{{/if}} style="margin-top:2px;flex-shrink:0;">
             <span>
-                <b>GM Folder</b> — players can trigger sounds from the same folder as the GM<br>
+                <b>GM Folder</b> — players trigger sounds from the GM's current soundboard<br>
                 <small style="color:#666;">Current GM folder: <code>{{gmDir}}</code></small>
-            </span>
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
-            <input type="radio" name="pm-mode" value="folder"
-                   {{#if (eq mode 'folder')}}checked{{/if}}
-                   onchange="game.settings.set('SoundBoard','playerSoundboardMode','folder')">
-            <span>
-                <b>Personal Folder</b> — each player sets their own sounds folder inside their SoundBoard window
             </span>
         </label>
     </div>
 
-    <h3 style="margin:0 0 6px;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:1px;">Player Access</h3>
-    <p style="font-size:11px;color:#666;margin-bottom:8px;">Toggle which players can open a personal SoundBoard.</p>
+    <!-- Mode 2: Global Player Folder -->
+    <div style="background:#f5f5f5;border-radius:6px;padding:8px 12px;margin-bottom:6px;border:2px solid {{#if (eq mode 'global')}}#4a90d9{{else}}transparent{{/if}};">
+        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;margin-bottom:6px;">
+            <input type="radio" name="pm-mode" value="global"
+                   {{#if (eq mode 'global')}}checked{{/if}} style="margin-top:2px;flex-shrink:0;">
+            <span><b>Global Player Folder</b> — all players use the same folder set by the GM</span>
+        </label>
+        <div style="display:flex;align-items:center;gap:8px;padding-left:22px;">
+            <i class="fas fa-folder" style="color:{{#if gmRootDir}}#c49a00{{else}}#ccc{{/if}};flex-shrink:0;"></i>
+            <span style="flex:1;font-size:11px;color:#444;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                {{#if gmRootDir}}{{gmRootDir}}{{else}}<i style="color:#aaa;">not set — click Set to choose</i>{{/if}}
+            </span>
+            <button type="button" id="pm-global-dir-pick" style="padding:2px 10px;font-size:11px;flex-shrink:0;white-space:nowrap;">📂 Set</button>
+        </div>
+    </div>
+
+    <!-- Mode 3: Personal Folder -->
+    <div style="background:#f5f5f5;border-radius:6px;padding:8px 12px;margin-bottom:14px;border:2px solid {{#if (eq mode 'personal')}}#4a90d9{{else}}transparent{{/if}};">
+        <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;margin:0;">
+            <input type="radio" name="pm-mode" value="personal"
+                   {{#if (eq mode 'personal')}}checked{{/if}} style="margin-top:2px;flex-shrink:0;">
+            <span>
+                <b>Personal Folder</b> — each player gets their own assigned folder<br>
+                <small style="color:#666;">Assign folders per-player below. Players can override if <i>Allow Players to Set Their Own Folder</i> is enabled in settings.</small>
+            </span>
+        </label>
+    </div>
+
+    <h3 style="margin:0 0 4px;font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #c00;padding-bottom:3px;">Player Access & Folders</h3>
+    <p style="font-size:11px;color:#666;margin:4px 0 8px;">Toggle access and assign personal folders (used in Personal Folder mode).</p>
 
     {{#each players}}
-    <div style="display:flex;align-items:center;gap:8px;margin:4px 0;padding:7px 10px;background:#f0f0f0;border-radius:6px;">
-        <span style="flex:1;font-weight:600;">{{name}}</span>
-        <button type="button" class="btn btn-sm sb-pm-access-toggle {{#if hasAccess}}btn-success active{{else}}btn-outline-secondary{{/if}}"
-                data-user-id="{{id}}" style="font-size:11px;padding:3px 10px;min-width:110px;">
-            {{#if hasAccess}}✓ Has Access{{else}}✗ No Access{{/if}}
-        </button>
+    <div style="background:#f0f0f0;border-radius:6px;padding:8px 10px;margin-bottom:8px;">
+        <!-- Access toggle -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">
+            <b style="flex:1;">{{name}}</b>
+            <button type="button" class="btn btn-sm sb-pm-access-toggle {{#if hasAccess}}btn-success{{else}}btn-outline-secondary{{/if}}"
+                    data-user-id="{{id}}" style="font-size:11px;padding:3px 10px;min-width:100px;">
+                {{#if hasAccess}}✓ Has Access{{else}}✗ No Access{{/if}}
+            </button>
+        </div>
+        <!-- Personal folder row -->
+        <div style="display:flex;align-items:center;gap:6px;background:#e8e8e8;border-radius:4px;padding:4px 8px;">
+            <i class="fas fa-folder" style="color:{{#if personalDir}}#c49a00{{else}}#bbb{{/if}};flex-shrink:0;font-size:12px;"></i>
+            <span style="flex:1;font-size:11px;color:#555;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+                {{#if personalDir}}{{personalDir}}{{else}}<i style="color:#aaa;">no personal folder assigned</i>{{/if}}
+            </span>
+            <button type="button" class="pm-player-dir-pick" data-user-id="{{id}}"
+                    style="padding:1px 8px;font-size:11px;flex-shrink:0;white-space:nowrap;">📂 Set</button>
+            {{#if personalDir}}
+            <button type="button" class="pm-player-dir-clear" data-user-id="{{id}}"
+                    style="padding:1px 6px;font-size:11px;color:#c00;flex-shrink:0;">✕</button>
+            {{/if}}
+        </div>
     </div>
     {{else}}
     <p style="color:#888;font-size:12px;">No non-GM players found.</p>
     {{/each}}
-
 </div>

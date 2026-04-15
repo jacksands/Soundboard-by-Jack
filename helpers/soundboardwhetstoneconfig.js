@@ -139,8 +139,8 @@ Hooks.once('WhetstoneReady', () => {
                 '#444444': 'Darkest Grey'
             }
         },
-        img: 'modules/SoundBoard/bundledDocs/default-theme-icon.png',
-        preview: 'modules/SoundBoard/bundledDocs/default-theme-preview.png',
+        img: 'modules/Soundboard-by-Jack/bundledDocs/default-theme-icon.png',
+        preview: 'modules/Soundboard-by-Jack/bundledDocs/default-theme-preview.png',
         systems: {
             'core': '0.6.6'
         }

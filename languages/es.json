@@ -17,7 +17,7 @@
         "settings": {
             "directory": {
                 "name": "Directorio Personalizado de SoundBoard",
-                "hint": "Debería se un lugar con subdirectorios que contengan ficheros de audio. Puede consultar un ejemplo en modules/SoundBoard/exampleAudio/"
+                "hint": "Debería se un lugar con subdirectorios que contengan ficheros de audio. Puede consultar un ejemplo en modules/Soundboard-by-Jack/exampleAudio/"
             },
             "source": {
                 "name": "Tipo de Fuente",

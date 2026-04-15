@@ -6,7 +6,7 @@ class SoundBoardApplication extends foundry.appv1.api.Application {
         const options = super.defaultOptions;
         options.title = `🔊${game.i18n.localize('SOUNDBOARD.app.title')}`;
         options.id = 'soundboard-app';
-        options.template = 'modules/SoundBoard/templates/soundboard.html';
+        options.template = 'modules/Soundboard-by-Jack/templates/soundboard.html';
         options.resizable = true;
         return options;
     }
@@ -46,7 +46,7 @@ class SoundBoardApplication extends foundry.appv1.api.Application {
             const randMax = sound.loopDelayMax || 0;
             // safe id for element ids in the template
             const safeId = identifyingPath.replace(/[^a-z0-9]/gi, '_');
-            fetch('modules/SoundBoard/templates/extendedoptions.html')
+            fetch('modules/Soundboard-by-Jack/templates/extendedoptions.html')
                 .then(r => r.text())
                 .then(data => {
                     // escape identifyingPath for use inside onclick strings
@@ -56,9 +56,10 @@ class SoundBoardApplication extends foundry.appv1.api.Application {
                     data = data.replace('$loopClass', isLooping ? 'loop-active' : '');
                     data = data.replace('$star', isFavorite ? 'fas fa-star' : 'far fa-star');
                     data = data.replace('$favoriteFn', isFavorite ? 'unfavoriteSound' : 'favoriteSound');
-                    data = data.replace('$offActiveClass',    (!isLooping)                      ? 'active' : '');
-                    data = data.replace('$fixedActiveClass',  (isLooping && loopMode==='fixed')  ? 'active' : '');
-                    data = data.replace('$randomActiveClass', (isLooping && loopMode==='random') ? 'active' : '');
+                    data = data.replace('$offActiveClass',    (!isLooping)                       ? 'active' : '');
+                    data = data.replace('$simpleActiveClass', (isLooping && loopMode==='simple')  ? 'active' : '');
+                    data = data.replace('$fixedActiveClass',  (isLooping && loopMode==='fixed')   ? 'active' : '');
+                    data = data.replace('$randomActiveClass', (isLooping && loopMode==='random')  ? 'active' : '');
                     data = data.replace('$fixedDelay', fixedDelay);
                     data = data.replace('$randMin', randMin);
                     data = data.replace('$randMax', randMax);

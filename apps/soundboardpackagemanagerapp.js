@@ -9,7 +9,7 @@ class SoundBoardPackageManagerApplication extends foundry.appv1.api.Application 
         const options = super.defaultOptions;
         options.title = `🎁${game.i18n.localize('SOUNDBOARD.app.packman.title')}`;
         options.id = 'soundboard-packagemanager-app';
-        options.template = 'modules/SoundBoard/templates/soundboardpackagemanager.html';
+        options.template = 'modules/Soundboard-by-Jack/templates/soundboardpackagemanager.html';
         options.resizable = false;
         options.width = 400;
         options.height = 600;

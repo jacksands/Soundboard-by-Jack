@@ -5,7 +5,7 @@
                 onclick="SoundBoard.$favoriteFn('$identifyingPath'); SoundBoardApplication.toggleExtendedOptions(this); $removeFavFn">
             <i class="$star"></i>
         </button>
-        <!-- Loop toggle button — opens inline panel below, not a dropdown -->
+        <!-- Loop toggle — opens inline panel -->
         <button class="sb-repeat-button sb-extended-info-button col"
                 title="Loop options"
                 onclick="(function(btn){
@@ -15,44 +15,58 @@
             <i class="fas fa-sync-alt $loopClass"></i>
         </button>
     </div>
-    <!-- Inline loop panel — NOT inside a button -->
-    <div class="sb-loop-panel" style="background:rgba(60,60,80,0.97);border-radius:4px;padding:8px 10px;display:none;">
-        <p style="margin:0 0 6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#aaa;">Loop Mode</p>
+    <!-- Loop panel — position:absolute via CSS, does NOT stretch the sound button -->
+    <div class="sb-loop-panel" style="background:rgba(40,40,55,0.98);border-radius:4px;padding:8px 10px;display:none;">
+        <p style="margin:0 0 5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#aaa;">Loop Mode</p>
 
-        <!-- Off -->
-        <div class="sb-loop-row $offActiveClass" style="display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:4px;cursor:pointer;margin-bottom:2px;"
+        <!-- 1. OFF — isolated -->
+        <div class="sb-loop-row $offActiveClass"
+             style="display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:4px;cursor:pointer;margin-bottom:2px;"
              onclick="SoundBoard.setLoopMode('$identifyingPath','off',0,0); SoundBoardApplication.toggleExtendedOptions(this);">
-            <i class="fas fa-ban" style="color:#ff6b6b;width:14px;"></i>
+            <i class="fas fa-ban" style="color:#ff6b6b;width:14px;flex-shrink:0;"></i>
             <span style="color:#fff;font-size:12px;">Off (stop loop)</span>
         </div>
 
-        <!-- Fixed delay -->
-        <div class="sb-loop-row $fixedActiveClass" style="display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:4px;margin-bottom:2px;">
-            <i class="fas fa-sync-alt" style="color:#aaa;width:14px;"></i>
-            <span style="color:#fff;font-size:12px;white-space:nowrap;">Repeat every</span>
-            <input type="number" class="sb-loop-input" id="sb-fixed-delay-$safeId"
-                   min="0" max="3600" step="1" value="$fixedDelay"
-                   style="width:52px;height:22px;padding:1px 4px;font-size:12px;border:1px solid #666;border-radius:3px;background:#333;color:#fff;text-align:center;">
+        <!-- 2. SIMPLE REPEAT — isolated, no delay, just repeat immediately -->
+        <div class="sb-loop-row $simpleActiveClass"
+             style="display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:4px;cursor:pointer;margin-bottom:2px;"
+             onclick="SoundBoard.setLoopMode('$identifyingPath','simple',0,0); SoundBoardApplication.toggleExtendedOptions(this);">
+            <i class="fas fa-redo" style="color:#aaa;width:14px;flex-shrink:0;"></i>
+            <span style="color:#fff;font-size:12px;">Repeat immediately</span>
+        </div>
+
+        <!-- 3. REPEAT EVERY X — isolated, fixed delay, own inputs and own Set button -->
+        <div class="sb-loop-row $fixedActiveClass"
+             style="display:flex;align-items:center;gap:5px;padding:4px 6px;border-radius:4px;margin-bottom:2px;">
+            <i class="fas fa-sync-alt" style="color:#aaa;width:14px;flex-shrink:0;"></i>
+            <span style="color:#fff;font-size:12px;white-space:nowrap;">Every</span>
+            <input type="number" id="sb-fixed-delay-$safeId"
+                   min="1" max="3600" step="1" value="$fixedDelay"
+                   style="width:50px;height:22px;padding:1px 4px;font-size:12px;border:1px solid #666;border-radius:3px;background:#333;color:#fff;text-align:center;"
+                   onclick="event.stopPropagation();">
             <span style="color:#fff;font-size:12px;">s</span>
             <button type="button"
-                    style="margin-left:auto;padding:1px 8px;font-size:11px;background:#01701c;color:#fff;border:none;border-radius:3px;cursor:pointer;"
+                    style="margin-left:auto;padding:1px 10px;font-size:11px;background:#01701c;color:#fff;border:none;border-radius:3px;cursor:pointer;white-space:nowrap;"
                     onclick="SoundBoard._applyFixedLoop('$identifyingPath', this); event.stopPropagation();">✓ Set</button>
         </div>
 
-        <!-- Random delay -->
-        <div class="sb-loop-row $randomActiveClass" style="display:flex;align-items:center;gap:4px;padding:4px 6px;border-radius:4px;">
-            <i class="fas fa-random" style="color:#aaa;width:14px;"></i>
+        <!-- 4. RANDOM — isolated, own min/max inputs and own Set button -->
+        <div class="sb-loop-row $randomActiveClass"
+             style="display:flex;align-items:center;gap:4px;padding:4px 6px;border-radius:4px;">
+            <i class="fas fa-random" style="color:#aaa;width:14px;flex-shrink:0;"></i>
             <span style="color:#fff;font-size:12px;white-space:nowrap;">Random</span>
-            <input type="number" class="sb-loop-input" id="sb-rand-min-$safeId"
-                   min="0" max="3600" step="1" value="$randMin"
-                   style="width:48px;height:22px;padding:1px 4px;font-size:12px;border:1px solid #666;border-radius:3px;background:#333;color:#fff;text-align:center;">
+            <input type="number" id="sb-rand-min-$safeId"
+                   min="1" max="3600" step="1" value="$randMin"
+                   style="width:46px;height:22px;padding:1px 4px;font-size:12px;border:1px solid #666;border-radius:3px;background:#333;color:#fff;text-align:center;"
+                   onclick="event.stopPropagation();">
             <span style="color:#fff;font-size:12px;">–</span>
-            <input type="number" class="sb-loop-input" id="sb-rand-max-$safeId"
-                   min="0" max="3600" step="1" value="$randMax"
-                   style="width:48px;height:22px;padding:1px 4px;font-size:12px;border:1px solid #666;border-radius:3px;background:#333;color:#fff;text-align:center;">
+            <input type="number" id="sb-rand-max-$safeId"
+                   min="1" max="3600" step="1" value="$randMax"
+                   style="width:46px;height:22px;padding:1px 4px;font-size:12px;border:1px solid #666;border-radius:3px;background:#333;color:#fff;text-align:center;"
+                   onclick="event.stopPropagation();">
             <span style="color:#fff;font-size:12px;">s</span>
             <button type="button"
-                    style="margin-left:auto;padding:1px 8px;font-size:11px;background:#01701c;color:#fff;border:none;border-radius:3px;cursor:pointer;"
+                    style="margin-left:auto;padding:1px 10px;font-size:11px;background:#01701c;color:#fff;border:none;border-radius:3px;cursor:pointer;white-space:nowrap;"
                     onclick="SoundBoard._applyRandomLoop('$identifyingPath', this); event.stopPropagation();">✓ Set</button>
         </div>
     </div>
