@@ -115,7 +115,7 @@ Hooks.once('WhetstoneReady', () => {
     });
 
     // register a theme
-    game.Whetstone.themes.register('SoundBoard', {
+    game.Whetstone.themes.register('Soundboard-by-Jack', {
         id: 'SoundBoardDefault',
         name: 'SoundBoardDefault',
         title: game.i18n.localize('SOUNDBOARD.whetstone.theme.default.title'),

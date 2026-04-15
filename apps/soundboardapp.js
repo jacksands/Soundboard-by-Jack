@@ -88,7 +88,7 @@ class SoundBoardApplication extends foundry.appv1.api.Application {
             if (this.rendered) {
                 setTimeout(() => {
                     const appEl = document.getElementById('soundboard-app');
-                    if (appEl) appEl.style.opacity = game.settings.get('SoundBoard', 'opacity');
+                    if (appEl) appEl.style.opacity = game.settings.get('Soundboard-by-Jack', 'opacity');
                     clearInterval(renderedInterval);
                     renderedInterval = undefined;
                 }, 100);
@@ -114,7 +114,7 @@ class SoundBoardApplication extends foundry.appv1.api.Application {
                 });
             }
         });
-        var volume = game.settings.get('SoundBoard', 'soundboardServerVolume');
+        var volume = game.settings.get('Soundboard-by-Jack', 'soundboardServerVolume');
         var collapse = totalCount > 2000;
         // V14: game.users.entities removed, use game.users.contents
         var players = game.users.contents.filter((el) => el.active && !el.isGM).map((el) => {
@@ -124,7 +124,7 @@ class SoundBoardApplication extends foundry.appv1.api.Application {
         var cacheMode = SoundBoard.cacheMode;
         var macroMode = SoundBoard.macroMode;
         var volumeMode = SoundBoard.volumeMode;
-        var isExampleAudio = game.settings.get('SoundBoard', 'soundboardDirectory') === game.settings.settings.get('SoundBoard.soundboardDirectory').default;
+        var isExampleAudio = game.settings.get('Soundboard-by-Jack', 'soundboardDirectory') === game.settings.settings.get('Soundboard-by-Jack.soundboardDirectory').default;
 
         return {
             tab: { main: true },

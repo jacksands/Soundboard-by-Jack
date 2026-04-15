@@ -61,7 +61,7 @@
             localStorage.setItem(TRUNC_KEY, active);
             const btn = root.querySelector('#sb-truncate-toggle');
             btn?.classList.toggle('active', active);
-            const maxChars = game.settings.get('SoundBoard', 'buttonNameMaxChars') || 15;
+            const maxChars = game.settings.get('Soundboard-by-Jack', 'buttonNameMaxChars') || 15;
             root.querySelectorAll('.sb-btn-name').forEach(span => {
                 const full = span.dataset.fullName || span.textContent;
                 if (!span.dataset.fullName) span.dataset.fullName = span.textContent;

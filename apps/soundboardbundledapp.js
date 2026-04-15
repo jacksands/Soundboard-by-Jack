@@ -21,7 +21,7 @@ class SoundBoardBundledApplication extends SoundBoardApplication {
                 });
             }
         });
-        var volume = game.settings.get('SoundBoard', 'soundboardServerVolume');
+        var volume = game.settings.get('Soundboard-by-Jack', 'soundboardServerVolume');
         // V14: game.users.entities removed, use game.users.contents
         var players = game.users.contents.filter((el) => el.active && !el.isGM).map((el) => {
             return {name: el.name, id: el.id, isTarget: el.id === SoundBoard.targetedPlayerID};

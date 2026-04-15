@@ -36,10 +36,10 @@ class SBPackageManager {
     constructor() {
         this._soundPacks = [];
 
-        game.settings.register('SoundBoard', 'disabledPacks', {
+        game.settings.register('Soundboard-by-Jack', 'disabledPacks', {
             scope: 'world', config: false, default: []
         });
-        this.disabledArray = game.settings.get('SoundBoard', 'disabledPacks');
+        this.disabledArray = game.settings.get('Soundboard-by-Jack', 'disabledPacks');
     }
 
     get soundPacks() {
@@ -77,7 +77,7 @@ class SBPackageManager {
         if (pack) {
             pack.disabled = true;
             this.disabledArray.push(packName);
-            game.settings.set('SoundBoard', 'disabledPacks', this.disabledArray);
+            game.settings.set('Soundboard-by-Jack', 'disabledPacks', this.disabledArray);
             SoundBoard.refreshSounds({notify: false, bringToTop: false});
         }
     }
@@ -87,7 +87,7 @@ class SBPackageManager {
         if (pack) {
             pack.disabled = false;
             this.disabledArray = this.disabledArray.filter(e => e !== packName);
-            game.settings.set('SoundBoard', 'disabledPacks', this.disabledArray);
+            game.settings.set('Soundboard-by-Jack', 'disabledPacks', this.disabledArray);
             SoundBoard.refreshSounds({notify: false, bringToTop: false});
         }
     }
@@ -109,7 +109,7 @@ class SBPackageManager {
                     el.classList.add('active');
                 }
             }
-            game.settings.set('SoundBoard', 'disabledPacks', this.disabledArray);
+            game.settings.set('Soundboard-by-Jack', 'disabledPacks', this.disabledArray);
 
             SoundBoard.refreshSounds({notify: false, bringToTop: false});
         }
