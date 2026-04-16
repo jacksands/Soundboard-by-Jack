@@ -1085,6 +1085,9 @@ class SoundBoard {
         });
 
         // Hidden/internal settings (config: false)
+        game.settings.register('Soundboard-by-Jack', 'disabledPacks', {
+            scope: 'world', config: false, default: []
+        });
         game.settings.register('Soundboard-by-Jack', 'soundboardServerVolume', {
             name: 'Server Volume', scope: 'world', config: false, type: Number, default: 100
         });
@@ -1157,13 +1160,6 @@ class SoundBoard {
         }
     }
 }
-
-// V14: use closeSoundBoardApplication hook name (fires from AppV1 name, but our apps extend AppV1 base via Application)
-Hooks.on('closeSoundBoardApplication', () => {
-    if (SoundBoard.openedBoard?.rendered) {
-        SoundBoard.openedBoard.close();
-    }
-});
 
 // V14: settings must be registered in 'init', but getSounds needs 'ready'
 // Split: register settings in init, load sounds in ready

@@ -129,14 +129,6 @@
                 onclick="SoundBoard.openSoundscapeManager()">
             <i class="fas fa-music"></i>
         </button>
-        <!-- Player SoundBoard Manager (GM only) -->
-        {{#if isGM}}
-        <button id="player-manager" type="button" class="btn btn-secondary toolbar-btn"
-                title="{{localize 'SOUNDBOARD.app.tooltip.playerManager'}}"
-                onclick="new SoundBoardPlayerManagerApplication().render(true)">
-            <i class="fas fa-user-cog"></i>
-        </button>
-        {{/if}}
         <!-- Font size controls -->
         <button id="sb-font-minus" type="button" class="btn btn-secondary toolbar-btn" title="Decrease font size">
             <i class="fas fa-minus"></i>

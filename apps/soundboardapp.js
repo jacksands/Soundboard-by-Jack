@@ -124,7 +124,7 @@ class SoundBoardApplication extends foundry.appv1.api.Application {
         var cacheMode = SoundBoard.cacheMode;
         var macroMode = SoundBoard.macroMode;
         var volumeMode = SoundBoard.volumeMode;
-        var isExampleAudio = game.settings.get('Soundboard-by-Jack', 'soundboardDirectory') === game.settings.settings.get('Soundboard-by-Jack.soundboardDirectory').default;
+        var isExampleAudio = game.settings.get('Soundboard-by-Jack', 'soundboardDirectory') === 'modules/Soundboard-by-Jack/exampleAudio';
 
         return {
             tab: { main: true },
@@ -137,8 +137,7 @@ class SoundBoardApplication extends foundry.appv1.api.Application {
             cacheMode,
             macroMode,
             volumeMode,
-            isExampleAudio,
-            isGM: game.user.isGM
+            isExampleAudio
         };
     }
 }

@@ -34,10 +34,6 @@
                 "name": "Players trigger SoundBoard macros",
                 "hint": "Enable this to allow players to trigger a sound using a macro with playSoundByName. Requires a connected GM."
             },
-            "allowPlayersPersonalSoundboard": {
-                "name": "Allow Personal Player SoundBoard",
-                "hint": "Allows the GM to assign sounds to players. Players with access can open their own SoundBoard."
-            },
             "popoutCompat": {
                 "name": "Force PopOut! Compatibility",
                 "hint": "Override some PopOut! code to force compatibility. Note that this may reduce performance while the SoundBoard is popped out. Changing this setting will refresh your browser."
@@ -73,13 +69,11 @@
                 "deleteMacros": "Delete all SoundBoard macros",
                 "openPackMan": "Open package manager",
                 "help": "Open help app",
-                "soundscape": "Soundscape Manager",
-                "playerManager": "Player SoundBoard Manager"
+                "soundscape": "Soundscape Manager"
             },
             "help": {
                 "title": "SoundBoard Help"
             },
-            "playerTitle": "My SoundBoard",
             "packman": {
                 "title": "SoundBoard Package Manager",
                 "installedPacksHeader": "Installed Sound Packs",

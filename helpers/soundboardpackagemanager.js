@@ -35,10 +35,6 @@ class SBSoundPack {
 class SBPackageManager {
     constructor() {
         this._soundPacks = [];
-
-        game.settings.register('Soundboard-by-Jack', 'disabledPacks', {
-            scope: 'world', config: false, default: []
-        });
         this.disabledArray = game.settings.get('Soundboard-by-Jack', 'disabledPacks');
     }
 
