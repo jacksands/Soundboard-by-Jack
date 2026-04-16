@@ -395,7 +395,16 @@ class SoundBoard {
                 return element.identifyingPath === identifyingPath;
             });
         });
-        sound.identifyingPath = identifyingPath;
+        if (sound) {
+            sound.identifyingPath = identifyingPath;
+            // Aplicar configuração de loop salva (se houver)
+            let loopSettings = game.settings?.get?.('Soundboard-by-Jack', 'soundboardIndividualLoopSettings') || {};
+            if (loopSettings[identifyingPath]) {
+                sound.loopMode = loopSettings[identifyingPath].mode;
+                sound.loopDelayMin = loopSettings[identifyingPath].min;
+                sound.loopDelayMax = loopSettings[identifyingPath].max;
+            }
+        }
         return sound;
     }
 
@@ -457,12 +466,22 @@ class SoundBoard {
 
     static setLoopMode(identifyingPath, mode, delayMin, delayMax) {
         const sound = SoundBoard.getSoundFromIdentifyingPath(identifyingPath);
+        // Salvar configuração individual
+        let loopSettings = game.settings.get('Soundboard-by-Jack', 'soundboardIndividualLoopSettings') || {};
         if (mode === 'off') {
             if (sound.loop) SoundBoard.stopLoop(identifyingPath);
+            // Remove configuração salva se existir
+            if (loopSettings[identifyingPath]) {
+                delete loopSettings[identifyingPath];
+                game.settings.set('Soundboard-by-Jack', 'soundboardIndividualLoopSettings', loopSettings);
+            }
             return;
         }
         const min = Math.max(0, Math.min(3600, Number(delayMin) || 0));
         const max = Math.max(min, Math.min(3600, Number(delayMax) || min));
+        // Salva as opções
+        loopSettings[identifyingPath] = { mode, min, max };
+        game.settings.set('Soundboard-by-Jack', 'soundboardIndividualLoopSettings', loopSettings);
         if (sound.loop) {
             // Update in-place without restarting
             sound.loopMode = mode;
@@ -976,7 +995,8 @@ class SoundBoard {
     static _applyFixedLoop(identifyingPath, btnEl) {
         const safeId = identifyingPath.replace(/[^a-z0-9]/gi, '_');
         const input = document.getElementById(`sb-fixed-delay-${safeId}`);
-        const delay = input ? parseFloat(input.value) || 0 : 0;
+        const delay = input ? parseFloat(input.value) || 3 : 3;
+        // Sempre salva min = max = delay
         SoundBoard.setLoopMode(identifyingPath, 'fixed', delay, delay);
         SoundBoardApplication.toggleExtendedOptions(btnEl);
     }
@@ -985,8 +1005,9 @@ class SoundBoard {
         const safeId = identifyingPath.replace(/[^a-z0-9]/gi, '_');
         const minInput = document.getElementById(`sb-rand-min-${safeId}`);
         const maxInput = document.getElementById(`sb-rand-max-${safeId}`);
-        const min = minInput ? parseFloat(minInput.value) || 0 : 0;
+        const min = minInput ? parseFloat(minInput.value) || 3 : 3;
         const max = maxInput ? parseFloat(maxInput.value) || min : min;
+        // Salva min e max conforme preenchido
         SoundBoard.setLoopMode(identifyingPath, 'random', min, max);
         SoundBoardApplication.toggleExtendedOptions(btnEl);
     }
@@ -995,6 +1016,14 @@ class SoundBoard {
 
 
     static _registerSettings() {
+                game.settings.register('Soundboard-by-Jack', 'soundboardIndividualLoopSettings', {
+                    name: 'Loop/Repeat por Som',
+                    hint: 'Salva as opções de repeat/loop para cada som individualmente.',
+                    scope: 'world',
+                    config: false,
+                    type: Object,
+                    default: {}
+                });
         game.settings.registerMenu('Soundboard-by-Jack', 'deleteMacrosMenu', {
             name: 'Delete All SoundBoard Macros',
             label: 'Delete Macros',
@@ -1016,7 +1045,8 @@ class SoundBoard {
                 if (value.length <= 0) {
                     game.settings.set('Soundboard-by-Jack', 'soundboardDirectory', 'modules/Soundboard-by-Jack/exampleAudio');
                 }
-                if (SoundBoard.audioHelper) SoundBoard.getSounds(true);
+                // Força refresh para garantir persistência e recarregar sons
+                window.location.reload();
             }
         });
 

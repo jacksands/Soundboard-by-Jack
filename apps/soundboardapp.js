@@ -41,9 +41,17 @@ class SoundBoardApplication extends foundry.appv1.api.Application {
             let isFavorite = sound.isFavorite;
             let isLooping = sound.loop;
             const loopMode = sound.loopMode || 'off';
-            const fixedDelay = sound.loopDelayMin || 0;
-            const randMin = sound.loopDelayMin || 0;
-            const randMax = sound.loopDelayMax || 0;
+            // Buscar valores salvos para cada modo
+            let loopSettings = game.settings?.get?.('Soundboard-by-Jack', 'soundboardIndividualLoopSettings') || {};
+            let fixedDelay = 3, randMin = 3, randMax = 3;
+            if (loopSettings[identifyingPath]) {
+                if (loopSettings[identifyingPath].mode === 'fixed') {
+                    fixedDelay = loopSettings[identifyingPath].min || 3;
+                } else if (loopSettings[identifyingPath].mode === 'random') {
+                    randMin = loopSettings[identifyingPath].min || 3;
+                    randMax = loopSettings[identifyingPath].max || 3;
+                }
+            }
             // safe id for element ids in the template
             const safeId = identifyingPath.replace(/[^a-z0-9]/gi, '_');
             fetch('modules/Soundboard-by-Jack/templates/extendedoptions.html')
