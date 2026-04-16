@@ -114,14 +114,25 @@
                 onclick="SoundBoard.toggleMacroMode(this.closest('.soundboard-container'))">
             <i class="fas fa-file-code"></i>
         </button>
+        <!-- Font size controls - destacado em ambar claro -->
+        <span style="background:#ffc10722;padding:2px 8px;border-radius:6px;display:flex;align-items:center;gap:4px;margin-right:8px;">
+            <button id="sb-font-minus" type="button" class="btn btn-secondary toolbar-btn" title="Decrease font size" style="color:#ffb300;background:#fff3cd;border-color:#ffe082;">
+                <i class="fas fa-minus"></i>
+            </button>
+            <span id="sb-font-label" style="color:#ffb300;font-size:10px;align-self:center;min-width:30px;text-align:center;user-select:none;">150%</span>
+            <button id="sb-font-plus" type="button" class="btn btn-secondary toolbar-btn" title="Increase font size" style="color:#ffb300;background:#fff3cd;border-color:#ffe082;">
+                <i class="fas fa-plus"></i>
+            </button>
+        </span>
+        <!-- Name truncation toggle -->
+        <button id="sb-truncate-toggle" type="button" class="btn btn-secondary toolbar-btn" title="Toggle name truncation (limits button height)">
+            <i class="fas fa-text-width"></i>
+        </button>
+        <!-- Volume toggle ao lado do truncar -->
         <button id="volume-mode" type="button" class="btn btn-secondary toolbar-btn {{#if volumeMode}}active{{/if}}"
                 title="{{localize 'SOUNDBOARD.app.tooltip.volume'}}"
                 onclick="SoundBoard.toggleVolumeMode(this.closest('.soundboard-container'))">
             <i class="fas fa-volume-up"></i>
-        </button>
-        <button id="refresh-sounds" type="button" class="btn btn-secondary toolbar-btn"
-                title="{{localize 'SOUNDBOARD.app.tooltip.refresh'}}" onclick="SoundBoard.refreshSounds()">
-            <i class="fas fa-sync-alt"></i>
         </button>
         <!-- Soundscape Manager -->
         <button id="soundscape-manager" type="button" class="btn btn-secondary toolbar-btn"
@@ -129,23 +140,17 @@
                 onclick="SoundBoard.openSoundscapeManager()">
             <i class="fas fa-music"></i>
         </button>
-        <!-- Font size controls -->
-        <button id="sb-font-minus" type="button" class="btn btn-secondary toolbar-btn" title="Decrease font size">
-            <i class="fas fa-minus"></i>
-        </button>
-        <span id="sb-font-label" style="color:#fff;font-size:10px;align-self:center;min-width:30px;text-align:center;user-select:none;">150%</span>
-        <button id="sb-font-plus" type="button" class="btn btn-secondary toolbar-btn" title="Increase font size">
-            <i class="fas fa-plus"></i>
-        </button>
-        <!-- Name truncation toggle -->
-        <button id="sb-truncate-toggle" type="button" class="btn btn-secondary toolbar-btn" title="Toggle name truncation (limits button height)">
-            <i class="fas fa-text-width"></i>
-        </button>
+        <!-- ...existing code... -->
         <!-- Right Side (delete macros moved to Module Settings) -->
         <button id="open-packman" type="button" class="btn btn-secondary toolbar-btn ml-auto"
                 title="{{localize 'SOUNDBOARD.app.tooltip.openPackMan'}}"
                 onclick="SoundBoard.openSoundBoardPackageManager(SoundBoard.packageManager)">
             <i class="fas fa-tasks"></i>
+        </button>
+        <!-- Refresh agora junto do help -->
+        <button id="refresh-sounds" type="button" class="btn btn-secondary toolbar-btn"
+                title="{{localize 'SOUNDBOARD.app.tooltip.refresh'}}" onclick="SoundBoard.refreshSounds()">
+            <i class="fas fa-sync-alt"></i>
         </button>
         <button id="help" type="button" class="btn btn-info toolbar-btn"
                 title="{{localize 'SOUNDBOARD.app.tooltip.help'}}"
@@ -217,17 +222,21 @@
                 {{/if}}
                 {{#each files}}
                 {{#if isWild}}
-                <div class="btn btn-outline-info col{{#if isLoop}} loop-active{{/if}}{{#if isFavorite}} favorited{{/if}}"
+                <div class="btn btn-outline-info col{{#if isLoop}} loop-active{{/if}}{{#if isFavorite}} favorited{{/if}}{{#if (is-playing identifyingPath)}} sb-playing{{/if}}"
                      uuid="{{identifyingPath}}" title="{{name}}">
                     <span class="sb-btn-name">{{name}}</span>
                     <span class="badge badge-light">{{soundboard-getarraycount src}}</span>
                     {{else}}
-                    <div class="btn btn-outline-dark col{{#if isLoop}} loop-active{{/if}}{{#if isFavorite}} favorited{{/if}}"
+                    <div class="btn btn-outline-dark col{{#if isLoop}} loop-active{{/if}}{{#if isFavorite}} favorited{{/if}}{{#if (is-playing identifyingPath)}} sb-playing{{/if}}"
                          uuid="{{identifyingPath}}" title="{{name}}">
                         <span class="sb-btn-name">{{name}}</span>
                         {{/if}}
                         <button class="sb-play-button" onclick="SoundBoard.playSoundOrStopLoop('{{soundboard-escape identifyingPath}}')"
-                                oncontextmenu="SoundBoard.previewSound('{{soundboard-escape identifyingPath}}'); return false;"></button>
+                            oncontextmenu="SoundBoard.previewSound('{{soundboard-escape identifyingPath}}'); return false;"></button>
+                        <button class="sb-stop-button" title="Parar som"
+                            onclick="event.stopPropagation(); SoundBoard.stopSound('{{soundboard-escape identifyingPath}}')">
+                            <i class="fas fa-stop"></i>
+                        </button>
                         <button class="sb-more-button"
                                 onclick="SoundBoardApplication.toggleExtendedOptions(this, '{{soundboard-escape identifyingPath}}', '{{../../tab.fav}}')">
                             <i class="fas fa-ellipsis-v"></i>

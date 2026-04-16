@@ -30,7 +30,7 @@ class SoundBoard {
     static targetedPlayerID;
     static cacheMode = false;
     static macroMode = false;
-    static volumeMode = false;
+    static volumeMode = game?.settings?.get?.('Soundboard-by-Jack', 'volumeToggle') ?? false;
 
     static openedBoard;
 
@@ -56,6 +56,11 @@ class SoundBoard {
     }
 
     static handlebarsHelpers = {
+                'is-playing': function(identifyingPath) {
+                    // Verifica se o som está tocando
+                    if (!window.SoundBoard || !Array.isArray(window.SoundBoard.currentlyPlayingSounds)) return false;
+                    return window.SoundBoard.currentlyPlayingSounds.some(s => s && s.identifyingPath === identifyingPath);
+                },
         'eq': (a, b) => a === b,
         'soundboard-safeid': (str) => {
             return 'sbsafe-' + str.toLowerCase().replace(/[^a-z0-9]/g, function (s) {
@@ -68,19 +73,20 @@ class SoundBoard {
             return array.length;
         },
         'soundboard-escape': (str) => {
-            return str.replace(/(')/g, '\\$1');
+            return str.replace(/(')/g, '\$1');
         },
         'get-individual-volume': (identifyingPath) => {
             return this.getVolumeForSound(identifyingPath);
         }
     }
 
-    static setLocalStorage(key, value) {
-        localStorage.setItem(key, JSON.stringify(value));
+    // Substituído por game.settings client-side
+    static setUserSetting(key, value) {
+        game.settings.set('Soundboard-by-Jack', key, value);
     }
 
-    static getLocalStorage(key) {
-        return JSON.parse(localStorage.getItem(key));
+    static getUserSetting(key) {
+        return game.settings.get('Soundboard-by-Jack', key);
     }
 
     static openSoundBoard() {
@@ -92,6 +98,10 @@ class SoundBoard {
             ui.notifications.warn(game.i18n.localize('SOUNDBOARD.notif.soundsNotLoaded'));
             return;
         }
+        // Log de depuração: quantos sons carregados
+        let total = 0;
+        Object.keys(SoundBoard.sounds).forEach(k => total += SoundBoard.sounds[k].length);
+        console.log(`SoundBoard | Sons carregados: ${total}`);
         SoundBoard.openedBoard = new SoundBoardApplication();
         SoundBoard.openedBoard.render(true);
     }
@@ -155,7 +165,8 @@ class SoundBoard {
     }
 
     static getVolume() {
-        return game.settings.get('Soundboard-by-Jack', 'soundboardServerVolume') / 100;
+        // Usa o novo setting client-side para volume geral do módulo
+        return (game.settings.get('Soundboard-by-Jack', 'moduleGeneralVolume') || 90) / 100;
     }
 
     static getVolumeForSound(identifyingPath) {
@@ -219,6 +230,11 @@ class SoundBoard {
             detune,
             loop
         };
+        // Adiciona à lista de sons tocando
+        if (!SoundBoard.currentlyPlayingSounds.some(s => s && s.identifyingPath === sound.identifyingPath)) {
+            SoundBoard.currentlyPlayingSounds.push(sound);
+        }
+        SoundBoard._updatePlayingIndicator(identifyingPath, true);
         if (SoundBoard.cacheMode) {
             SoundBoard.audioHelper.cache(payload);
             if (push) {
@@ -358,6 +374,21 @@ class SoundBoard {
     static toggleVolumeMode(appEl) {
         const el = appEl instanceof HTMLElement ? appEl : (appEl[0] ?? document.getElementById('soundboard-app'));
         SoundBoard.volumeMode = !SoundBoard.volumeMode;
+        // Salva o estado no setting client-side
+        SoundBoard.setUserSetting('volumeToggle', SoundBoard.volumeMode);
+        const volBtn = el.querySelector('#volume-mode');
+        if (SoundBoard.volumeMode) {
+            volBtn?.classList.add('active');
+            document.querySelectorAll('.sb-individual-volume').forEach(v => v.style.display = '');
+        } else {
+            volBtn?.classList.remove('active');
+            document.querySelectorAll('.sb-individual-volume').forEach(v => v.style.display = 'none');
+        }
+    }
+    // Chamar isso ao abrir o app para restaurar o estado salvo
+    static restoreVolumeToggle(appEl) {
+        const el = appEl instanceof HTMLElement ? appEl : (appEl[0] ?? document.getElementById('soundboard-app'));
+        SoundBoard.volumeMode = SoundBoard.getUserSetting('volumeToggle');
         const volBtn = el.querySelector('#volume-mode');
         if (SoundBoard.volumeMode) {
             volBtn?.classList.add('active');
@@ -450,13 +481,14 @@ class SoundBoard {
     static stopLoop(identifyingPath) {
         const sound = SoundBoard.getSoundFromIdentifyingPath(identifyingPath);
         sound.loop = false;
-        // Para o áudio imediatamente e notifica os outros clientes
         SoundBoard.audioHelper.stop(sound);
         SoundBoard.socketHelper.sendData({
             type: SBSocketHelper.SOCKETMESSAGETYPE.STOP,
             payload: sound
         });
         document.querySelectorAll(`#soundboard-app .btn[uuid="${CSS.escape(identifyingPath)}"]`).forEach(btn => btn.classList.remove('loop-active'));
+        SoundBoard.currentlyPlayingSounds = SoundBoard.currentlyPlayingSounds.filter(s => s && s.identifyingPath !== identifyingPath);
+        SoundBoard._updatePlayingIndicator(identifyingPath, false);
     }
 
     static setLoopDelay(identifyingPath, delayInSeconds, button) {
@@ -500,6 +532,9 @@ class SoundBoard {
             type: SBSocketHelper.SOCKETMESSAGETYPE.STOP,
             payload: sound
         });
+        // Remove da lista de sons tocando
+        SoundBoard.currentlyPlayingSounds = SoundBoard.currentlyPlayingSounds.filter(s => s && s.identifyingPath !== identifyingPath);
+        SoundBoard._updatePlayingIndicator(identifyingPath, false);
     }
 
     static stopAllSounds() {
@@ -513,6 +548,25 @@ class SoundBoard {
             type: SBSocketHelper.SOCKETMESSAGETYPE.STOPALL
         });
         document.querySelectorAll('#soundboard-app .btn').forEach(btn => btn.classList.remove('loop-active'));
+        // Clear all playing indicators
+        document.querySelectorAll('#soundboard-app .btn[uuid].sb-playing').forEach(btn => btn.classList.remove('sb-playing'));
+        SoundBoard.currentlyPlayingSounds = [];
+    }
+
+    /**
+     * Atualiza o indicador visual de "tocando" (classe sb-playing) no botão do som.
+     * @param {string|null} identifyingPath — path do som, ou null para todos
+     * @param {boolean} playing
+     */
+    static _updatePlayingIndicator(identifyingPath, playing) {
+        if (identifyingPath === null) {
+            // Limpa todos
+            document.querySelectorAll('#soundboard-app .btn[uuid].sb-playing')
+                .forEach(el => el.classList.remove('sb-playing'));
+            return;
+        }
+        document.querySelectorAll(`#soundboard-app .btn[uuid="${CSS.escape(identifyingPath)}"]`)
+            .forEach(el => el.classList.toggle('sb-playing', playing));
     }
 
     static clearStoppedSounds() {
@@ -522,18 +576,7 @@ class SoundBoard {
     }
 
     static async _getBundledSounds(forceRefresh = false) {
-        if (!forceRefresh) {
-            try {
-                SoundBoard.bundledSounds = SoundBoard.getLocalStorage('SoundBoardModule.BundledSounds');
-                if (SoundBoard.bundledSounds) {
-                    SoundBoard.soundsLoaded = true;
-                    return;
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        }
-        localStorage.removeItem('SoundBoardModule.BundledSounds');
+        // Não usa mais settings/localStorage para BundledSounds
         const favoritesArray = game.settings.get('Soundboard-by-Jack', 'favoritedSounds');
         SoundBoard.bundledSounds = {};
 
@@ -664,7 +707,7 @@ class SoundBoard {
                 }
             }
         }
-        SoundBoard.setLocalStorage('SoundBoardModule.BundledSounds', SoundBoard.bundledSounds);
+        // Não salva mais BundledSounds em settings
         SoundBoard.soundsLoaded = true;
         if (!forceRefresh) {
             ui.notifications.notify(game.i18n.localize('SOUNDBOARD.notif.soundsDiscovered'));
@@ -672,18 +715,7 @@ class SoundBoard {
     }
 
     static async getSounds(forceRefresh = false) {
-        if (!forceRefresh) {
-            try {
-                SoundBoard.sounds = SoundBoard.getLocalStorage('SoundBoardModule.UserSounds');
-                if (SoundBoard.sounds) {
-                    await SoundBoard._getBundledSounds();
-                    return;
-                }
-            } catch (e) {
-                console.error(e);
-            }
-        }
-        localStorage.removeItem('SoundBoardModule.UserSounds');
+        // Não usa mais settings/localStorage para UserSounds
         const favoritesArray = game.settings.get('Soundboard-by-Jack', 'favoritedSounds');
         const source = game.settings.get('Soundboard-by-Jack', 'source');
 
@@ -766,7 +798,7 @@ class SoundBoard {
                     }
                 }
 
-                SoundBoard.setLocalStorage('SoundBoardModule.UserSounds', SoundBoard.sounds);
+                // Não salva mais UserSounds em settings
             } else {
                 let bucket;
                 if (source === 's3') {
@@ -834,7 +866,7 @@ class SoundBoard {
                     }
                 }
             }
-            SoundBoard.setLocalStorage('SoundBoardModule.UserSounds', SoundBoard.sounds);
+            // Não salva mais UserSounds em settings
         } catch (error) {
             SoundBoard.log(error, SoundBoard.LOGTYPE.ERR);
             SoundBoard.soundsError = true;
@@ -1016,6 +1048,39 @@ class SoundBoard {
 
 
     static _registerSettings() {
+                        // Preferências do usuário (client)
+                        game.settings.register('Soundboard-by-Jack', 'nameTruncation', {
+                            name: 'Truncar nomes dos botões',
+                            hint: 'Ativa/desativa truncamento de nomes dos botões de som.',
+                            scope: 'client',
+                            config: false,
+                            type: Boolean,
+                            default: true
+                        });
+                        game.settings.register('Soundboard-by-Jack', 'buttonFontSize', {
+                            name: 'Tamanho da fonte dos botões',
+                            hint: 'Define o tamanho da fonte dos botões do SoundBoard.',
+                            scope: 'client',
+                            config: false,
+                            type: Number,
+                            default: 1.0
+                        });
+                        game.settings.register('Soundboard-by-Jack', 'volumeToggle', {
+                            name: 'Mostrar/ocultar controles de volume',
+                            hint: 'Ativa/desativa o botão de volume rápido.',
+                            scope: 'client',
+                            config: false,
+                            type: Boolean,
+                            default: true
+                        });
+                        game.settings.register('Soundboard-by-Jack', 'moduleGeneralVolume', {
+                            name: 'Volume geral do módulo SoundBoard',
+                            hint: 'Volume principal do SoundBoard (não afeta o volume global do Foundry).',
+                            scope: 'client',
+                            config: false,
+                            type: Number,
+                            default: 90
+                        });
                 game.settings.register('Soundboard-by-Jack', 'soundboardIndividualLoopSettings', {
                     name: 'Loop/Repeat por Som',
                     hint: 'Salva as opções de repeat/loop para cada som individualmente.',

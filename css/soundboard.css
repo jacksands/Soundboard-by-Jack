@@ -431,3 +431,71 @@ input[type=range].sb-individual-volume::-webkit-slider-thumb {
 #soundboard-app .btn[uuid] {
   cursor: pointer;
 }
+
+/* ============================================================
+   STOP BUTTON INDIVIDUAL (aparece ao tocar)
+   ============================================================ */
+
+/* Sempre presente no DOM, invisível por default */
+#soundboard-app .sb-stop-button {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: #c62828;
+    color: #fff;
+    font-size: 7px;
+    line-height: 1;
+    cursor: pointer;
+    /* oculto por padrão */
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 4; /* acima do sb-play-button (z-index implícito) e da área de clique */
+    box-shadow: 0 1px 4px rgba(0,0,0,0.6);
+    pointer-events: none; /* não rouba clique quando invisível */
+    transition: background 0.12s, transform 0.12s, box-shadow 0.12s;
+}
+
+/* Visível quando o container pai tem .sb-playing */
+#soundboard-app .btn[uuid].sb-playing .sb-stop-button {
+    display: flex;
+    pointer-events: auto;
+    animation: sb-stop-fadein 0.15s ease;
+}
+
+@keyframes sb-stop-fadein {
+    from { opacity: 0; transform: scale(0.6); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+#soundboard-app .sb-stop-button:hover {
+    background: #b71c1c;
+    transform: scale(1.18);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.7);
+}
+
+#soundboard-app .sb-stop-button:focus {
+    outline: none;
+}
+
+/* Indicador de "tocando": pulso sutil na borda do botão de som */
+#soundboard-app .btn[uuid].sb-playing {
+    box-shadow: 0 0 0 2px rgba(198,40,40,0.55) !important;
+    animation: sb-playing-pulse 2s infinite;
+}
+
+@keyframes sb-playing-pulse {
+    0%, 100% { box-shadow: 0 0 0 2px rgba(198,40,40,0.55) !important; }
+    50%       { box-shadow: 0 0 0 4px rgba(198,40,40,0.20) !important; }
+}
+
+/* Não conflitar com loop-active (que tem seu próprio visual) */
+#soundboard-app .btn[uuid].loop-active.sb-playing {
+    animation: none;
+    box-shadow: none !important;
+}

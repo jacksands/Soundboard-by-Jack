@@ -97,6 +97,8 @@ class SoundBoardApplication extends foundry.appv1.api.Application {
                 setTimeout(() => {
                     const appEl = document.getElementById('soundboard-app');
                     if (appEl) appEl.style.opacity = game.settings.get('Soundboard-by-Jack', 'opacity');
+                    // Restaurar estado do volume toggle
+                    SoundBoard.restoreVolumeToggle(appEl);
                     clearInterval(renderedInterval);
                     renderedInterval = undefined;
                 }, 100);

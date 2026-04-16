@@ -49,9 +49,19 @@ class SBAudioHelper {
         soundNode.addEventListener('end', () => {
             this.removeActiveSound(soundNode);
             if (!game.user.isGM) return;
-            if (!sound.loop) return;
 
-            this._scheduleNextLoop(sound);
+            if (sound.loop) {
+                this._scheduleNextLoop(sound);
+                return;
+            }
+
+            // Som terminou naturalmente — remove indicador se não houver outra instância ativa
+            const stillActive = this.activeSounds.some(s => s.identifyingPath === sound.identifyingPath);
+            if (!stillActive) {
+                SoundBoard.currentlyPlayingSounds = SoundBoard.currentlyPlayingSounds
+                    .filter(s => s && s.identifyingPath !== sound.identifyingPath);
+                SoundBoard._updatePlayingIndicator(sound.identifyingPath, false);
+            }
         });
 
         if (!soundNode.loaded) await soundNode.load();
