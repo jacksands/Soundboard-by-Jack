@@ -12,6 +12,174 @@ class SBDeleteMacrosMenu extends foundry.applications.api.ApplicationV2 {
     }
 }
 
+// Settings menu class for managing player soundboard directories (using Dialog instead of AppV2)
+class SBPlayerDirectoryManager extends foundry.applications.api.ApplicationV2 {
+    static DEFAULT_OPTIONS = {
+        id: 'sb-player-directory-manager',
+        window: { 
+            title: 'Manage Player SoundBoard Directories',
+            resizable: true,
+            width: 600,
+            height: 500
+        }
+    };
+
+    constructor(options = {}) {
+        super(options);
+    }
+
+    async _prepareContext(options) {
+        const playerDirs = game.settings.get('Soundboard-by-Jack', 'soundboardPlayerDirectories') || {};
+        // Mostra todos os jogadores não-GM, mesmo desconectados
+        const players = game.users.contents.filter(u => !u.isGM);
+        
+        const playersList = players.map(player => ({
+            id: player.id,
+            name: player.name,
+            directory: playerDirs[player.id] || '',
+            hasDirectory: !!playerDirs[player.id]
+        }));
+
+        return { players: playersList };
+    }
+
+    async _renderHTML(context, options) {
+        const isGM = game.user.isGM;
+        const playerRows = context.players.map(player => {
+            // Só GM pode editar qualquer campo, jogador só pode editar o próprio
+            const editable = isGM;
+            return `
+            <div style="margin-bottom: 12px; padding: 8px; border: 1px solid #999; border-radius: 4px; background: #2a2a2a;">
+                <div style="font-weight: bold; margin-bottom: 6px; color: #fff;">${player.name}</div>
+                <div style="display: flex; gap: 4px; align-items: center;">
+                    <input type="text" 
+                           data-player-id="${player.id}" 
+                           class="player-directory-input" 
+                           value="${player.directory}" 
+                           placeholder="e.g., sounds/player-1"
+                           style="flex: 1; padding: 6px; border: 1px solid #666; border-radius: 3px; background: #1a1a1a; color: #fff;"
+                           ${editable ? '' : 'readonly'}>
+                    <button class="sb-player-picker-btn" data-player-id="${player.id}" 
+                            style="padding: 6px 10px; background: #444; color: #fff; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;" title="Pick folder">📁</button>
+                    <button class="sb-player-save-btn" data-player-id="${player.id}" 
+                            style="padding: 6px 12px; background: #2c5aa0; color: white; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;">Save</button>
+                    ${player.hasDirectory ? `
+                    <button class="sb-player-clear-btn" data-player-id="${player.id}" 
+                            style="padding: 6px 12px; background: #d32f2f; color: white; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;">Clear</button>
+                    ` : ''}
+                </div>
+            </div>
+            `;
+        }).join('');
+
+        return `
+        <div style="padding: 12px;">
+            <div style="margin-bottom: 12px; padding: 8px; background: #333; border-radius: 4px; font-size: 12px; color: #ccc; border-left: 3px solid #2c5aa0;">
+                <strong>Manage Player SoundBoard Directories</strong><br/>
+                Assign folders for each player. Leave empty to let players use their own settings.
+            </div>
+            <div style="max-height: 380px; overflow-y: auto;">
+                ${playerRows.length > 0 ? playerRows : '<p style="color: #999; text-align: center;">No players found.</p>'}
+            </div>
+            <div style="text-align:right; margin-top:10px;">
+                <button id="sb-player-dir-close-btn" style="padding:6px 18px;background:#444;color:#fff;border:none;border-radius:3px;cursor:pointer;font-weight:bold;">Fechar</button>
+            </div>
+        </div>
+        `;
+    }
+
+    async _replaceHTML(result, content, data) {
+        const html = this.element;
+        if (html) {
+            // Clear and insert new content
+            html.innerHTML = result;
+            // Re-attach listeners
+            this._attachListeners();
+        }
+    }
+
+    async _onRender(context, options) {
+        super._onRender(context, options);
+        this._attachListeners();
+    }
+
+    _attachListeners() {
+        const html = this.element;
+        const isGM = game.user.isGM;
+
+        // File picker para cada player
+        html?.querySelectorAll('.sb-player-picker-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const playerId = e.target.dataset.playerId;
+                // Só GM pode editar qualquer campo
+                if (!isGM) return;
+                const input = html.querySelector(`.player-directory-input[data-player-id="${playerId}"]`);
+                const current = input?.value || '';
+                // Abre o file picker de pasta
+                const fp = new FilePicker({
+                    type: 'folder',
+                    current: current,
+                    callback: path => {
+                        if (input) input.value = path;
+                    }
+                });
+                fp.render(true);
+            });
+        });
+
+        // Wire up save buttons
+        html?.querySelectorAll('.sb-player-save-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const playerId = e.target.dataset.playerId;
+                // Só GM pode salvar qualquer campo
+                if (!isGM) return;
+                const input = html.querySelector(`.player-directory-input[data-player-id="${playerId}"]`);
+                if (input) {
+                    await SBPlayerDirectoryManager.updateDirectory(playerId, input.value);
+                    await this.render(true);
+                }
+            });
+        });
+
+        // Wire up clear buttons
+        html?.querySelectorAll('.sb-player-clear-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const playerId = e.target.dataset.playerId;
+                // Só GM pode limpar
+                if (!isGM) return;
+                await SBPlayerDirectoryManager.deleteDirectory(playerId);
+                await this.render(true);
+            });
+        });
+
+        // Botão fechar
+        const closeBtn = html?.querySelector('#sb-player-dir-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                this.close();
+            });
+        }
+    }
+
+    static async updateDirectory(playerId, directory) {
+        const playerDirs = game.settings.get('Soundboard-by-Jack', 'soundboardPlayerDirectories') || {};
+        if (directory && directory.trim()) {
+            playerDirs[playerId] = directory.trim();
+            ui.notifications.info(`Directory set for player`);
+        } else {
+            delete playerDirs[playerId];
+            ui.notifications.info(`Directory cleared for player`);
+        }
+        await game.settings.set('Soundboard-by-Jack', 'soundboardPlayerDirectories', playerDirs);
+    }
+
+    static async deleteDirectory(playerId) {
+        const playerDirs = game.settings.get('Soundboard-by-Jack', 'soundboardPlayerDirectories') || {};
+        delete playerDirs[playerId];
+        await game.settings.set('Soundboard-by-Jack', 'soundboardPlayerDirectories', playerDirs);
+    }
+}
+
 class SoundBoard {
 
     static sounds = {};
@@ -80,7 +248,8 @@ class SoundBoard {
         }
     }
 
-    // Substituído por game.settings client-side
+    // Settings client-scope podem ser lidos/escritos por qualquer usuário.
+    // Settings world-scope restricted só o GM pode escrever (Foundry já bloqueia).
     static setUserSetting(key, value) {
         game.settings.set('Soundboard-by-Jack', key, value);
     }
@@ -89,48 +258,89 @@ class SoundBoard {
         return game.settings.get('Soundboard-by-Jack', key);
     }
 
-    static openSoundBoard() {
+    static async openSoundBoard() {
+        // Só permite abrir se for GM ou se a opção permitir
+        const allowPlayers = game.settings.get('Soundboard-by-Jack', 'allowPlayerSoundBoard');
+        if (!game.user.isGM && !allowPlayers) {
+            ui.notifications.warn('SoundBoard: O GM desativou o SoundBoard para jogadores.');
+            return;
+        }
+        if (!game.user.isGM) {
+            console.log(`SoundBoard (Player): Sons carregados: ${SoundBoard.soundsLoaded}, Categorias: ${Object.keys(SoundBoard.sounds).length}`);
+            if (!SoundBoard.soundsLoaded || Object.keys(SoundBoard.sounds).length === 0) {
+                // Pede ao GM para enviar os sons agora
+                ui.notifications.warn('SoundBoard: Solicitando sons ao GM...');
+                if (SoundBoard.socketHelper) {
+                    SoundBoard.socketHelper.sendData({
+                        type: SBSocketHelper.SOCKETMESSAGETYPE.REQUEST_SYNC,
+                        playerId: game.userId
+                    });
+                }
+                // Abre assim mesmo — o painel vai se atualizar automaticamente ao receber os sons
+            }
+        }
+        
         if (SoundBoard.soundsError) {
-            ui.notifications.error(game.i18n.localize('SOUNDBOARD.notif.soundsError'));
-            return;
+            const dir = SoundBoard.getDirectoryForCurrentUser();
+            if (!dir || !dir.trim()) {
+                ui.notifications.warn('SoundBoard: Nenhum diretório configurado. Configure em "Module Settings > My SoundBoard Directory".');
+            } else {
+                ui.notifications.error(`SoundBoard Error: Diretório "${dir}" não encontrado ou inacessível. Verifique Module Settings.`);
+            }
         }
-        if (!SoundBoard.soundsLoaded) {
-            ui.notifications.warn(game.i18n.localize('SOUNDBOARD.notif.soundsNotLoaded'));
-            return;
-        }
+        
         // Log de depuração: quantos sons carregados
         let total = 0;
         Object.keys(SoundBoard.sounds).forEach(k => total += SoundBoard.sounds[k].length);
         console.log(`SoundBoard | Sons carregados: ${total}`);
+        
+        // Garante que pode abrir múltiplas vezes
+        if (SoundBoard.openedBoard && SoundBoard.openedBoard.rendered) {
+            SoundBoard.openedBoard.close();
+        }
         SoundBoard.openedBoard = new SoundBoardApplication();
         SoundBoard.openedBoard.render(true);
     }
 
-    static openSoundBoardFav() {
-        if (!SoundBoard.soundsLoaded) {
-            ui.notifications.warn(game.i18n.localize('SOUNDBOARD.notif.soundsNotLoaded'));
-            return;
+    static async openSoundBoardFav() {
+        // Para jogadores, os sons são recebidos via socket pelo GM
+        if (!game.user.isGM && (!SoundBoard.soundsLoaded || Object.keys(SoundBoard.sounds).length === 0)) {
+            ui.notifications.warn('SoundBoard: Aguardando sincronização de sons pelo GM...');
+        }
+        if (SoundBoard.openedBoard && SoundBoard.openedBoard.rendered) {
+            SoundBoard.openedBoard.close();
         }
         SoundBoard.openedBoard = new SoundBoardFavApplication();
         SoundBoard.openedBoard.render(true);
     }
 
-    static openSoundBoardBundled() {
-        if (!SoundBoard.soundsLoaded) {
-            ui.notifications.warn(game.i18n.localize('SOUNDBOARD.notif.soundsNotLoaded'));
-            return;
+    static async openSoundBoardBundled() {
+        // Para jogadores, os sons são recebidos via socket pelo GM
+        if (!game.user.isGM && (!SoundBoard.soundsLoaded || Object.keys(SoundBoard.sounds).length === 0)) {
+            ui.notifications.warn('SoundBoard: Aguardando sincronização de sons pelo GM...');
+        }
+        if (SoundBoard.openedBoard && SoundBoard.openedBoard.rendered) {
+            SoundBoard.openedBoard.close();
         }
         SoundBoard.openedBoard = new SoundBoardBundledApplication();
         SoundBoard.openedBoard.render(true);
     }
 
     static openSoundBoardHelp() {
-        new SoundBoardHelp().render(true);
+        if (SoundBoard.openedBoard && SoundBoard.openedBoard.rendered) {
+            SoundBoard.openedBoard.close();
+        }
+        SoundBoard.openedBoard = new SoundBoardHelp();
+        SoundBoard.openedBoard.render(true);
     }
 
     static openSoundBoardPackageManager() {
         try {
-            new SoundBoardPackageManagerApplication(SoundBoard.packageManager).render(true);
+            if (SoundBoard.openedBoard && SoundBoard.openedBoard.rendered) {
+                SoundBoard.openedBoard.close();
+            }
+            SoundBoard.openedBoard = new SoundBoardPackageManagerApplication(SoundBoard.packageManager);
+            SoundBoard.openedBoard.render(true);
         } catch (e) {
             console.error(e);
         }
@@ -204,6 +414,40 @@ class SoundBoard {
 
     static async playSound(identifyingPath, push = true) {
         let sound = SoundBoard.getSoundFromIdentifyingPath(identifyingPath);
+        if (!sound) return;
+
+        // ---------------------------------------------------------------
+        // JOGADOR (não GM): não toca localmente — pede ao GM tocar globalmente
+        // ---------------------------------------------------------------
+        if (!game.user.isGM) {
+            if (push) {
+                // Resolve qual arquivo tocar (suporte a wildcard/múltiplos src)
+                let soundIndex = Math.floor(Math.random() * sound.src.length);
+                if (sound.lastPlayedIndex >= 0 && sound.src.length > 1 && sound.lastPlayedIndex === soundIndex) {
+                    if (++soundIndex > sound.src.length - 1) soundIndex = 0;
+                }
+                sound.lastPlayedIndex = soundIndex;
+                const src = sound.src[soundIndex];
+                const volume = SoundBoard.getVolume();
+
+                SoundBoard.socketHelper.sendData({
+                    type: SBSocketHelper.SOCKETMESSAGETYPE.PLAYER_PLAY_REQUEST,
+                    payload: {
+                        src, volume, identifyingPath,
+                        playerId: game.userId, playerName: game.user.name,
+                        loop: sound.loop || false,
+                        loopMode: sound.loopMode || 'simple',
+                        loopDelayMin: sound.loopDelayMin || 0,
+                        loopDelayMax: sound.loopDelayMax || 0
+                    }
+                });
+            }
+            return;
+        }
+
+        // ---------------------------------------------------------------
+        // GM: comportamento original
+        // ---------------------------------------------------------------
         let volume = SoundBoard.getVolume();
         sound.individualVolume = SoundBoard.getVolumeForSound(identifyingPath) / 100;
         let soundIndex = Math.floor(Math.random() * sound.src.length);
@@ -230,7 +474,7 @@ class SoundBoard {
             detune,
             loop
         };
-        // Adiciona à lista de sons tocando
+        // Adiciona à lista de sons tocando e atualiza indicador visual
         if (!SoundBoard.currentlyPlayingSounds.some(s => s && s.identifyingPath === sound.identifyingPath)) {
             SoundBoard.currentlyPlayingSounds.push(sound);
         }
@@ -481,14 +725,17 @@ class SoundBoard {
     static stopLoop(identifyingPath) {
         const sound = SoundBoard.getSoundFromIdentifyingPath(identifyingPath);
         sound.loop = false;
+        // Cancela loop de jogador se existir
+        if (SoundBoard.playerLoopSounds?.[identifyingPath]) {
+            delete SoundBoard.playerLoopSounds[identifyingPath];
+        }
+        // Para o áudio imediatamente e notifica os outros clientes
         SoundBoard.audioHelper.stop(sound);
         SoundBoard.socketHelper.sendData({
             type: SBSocketHelper.SOCKETMESSAGETYPE.STOP,
             payload: sound
         });
         document.querySelectorAll(`#soundboard-app .btn[uuid="${CSS.escape(identifyingPath)}"]`).forEach(btn => btn.classList.remove('loop-active'));
-        SoundBoard.currentlyPlayingSounds = SoundBoard.currentlyPlayingSounds.filter(s => s && s.identifyingPath !== identifyingPath);
-        SoundBoard._updatePlayingIndicator(identifyingPath, false);
     }
 
     static setLoopDelay(identifyingPath, delayInSeconds, button) {
@@ -527,14 +774,21 @@ class SoundBoard {
 
     static stopSound(identifyingPath) {
         let sound = SoundBoard.getSoundFromIdentifyingPath(identifyingPath);
+        // Garante que o loop é cancelado antes de parar o áudio
+        sound.loop = false;
+        // Limpa loop de jogador se existir
+        if (SoundBoard.playerLoopSounds?.[identifyingPath]) {
+            delete SoundBoard.playerLoopSounds[identifyingPath];
+        }
         SoundBoard.audioHelper.stop(sound);
         SoundBoard.socketHelper.sendData({
             type: SBSocketHelper.SOCKETMESSAGETYPE.STOP,
             payload: sound
         });
-        // Remove da lista de sons tocando
         SoundBoard.currentlyPlayingSounds = SoundBoard.currentlyPlayingSounds.filter(s => s && s.identifyingPath !== identifyingPath);
         SoundBoard._updatePlayingIndicator(identifyingPath, false);
+        // Remove indicador de loop-active
+        document.querySelectorAll(`#soundboard-app .btn[uuid="${CSS.escape(identifyingPath)}"]`).forEach(btn => btn.classList.remove('loop-active'));
     }
 
     static stopAllSounds() {
@@ -548,19 +802,23 @@ class SoundBoard {
             type: SBSocketHelper.SOCKETMESSAGETYPE.STOPALL
         });
         document.querySelectorAll('#soundboard-app .btn').forEach(btn => btn.classList.remove('loop-active'));
-        // Clear all playing indicators
-        document.querySelectorAll('#soundboard-app .btn[uuid].sb-playing').forEach(btn => btn.classList.remove('sb-playing'));
+        // Limpar todos os indicadores visuais de "tocando"
+        SoundBoard._updatePlayingIndicator(null, false);
         SoundBoard.currentlyPlayingSounds = [];
+        // Limpar badges de sons de jogadores e loops
+        SoundBoard.playerActiveSounds = {};
+        SoundBoard.playerLoopSounds = {};
+        SoundBoard._updatePlayerSoundIndicator();
     }
+
 
     /**
      * Atualiza o indicador visual de "tocando" (classe sb-playing) no botão do som.
-     * @param {string|null} identifyingPath — path do som, ou null para todos
+     * @param {string|null} identifyingPath — path do som, ou null para limpar todos
      * @param {boolean} playing
      */
     static _updatePlayingIndicator(identifyingPath, playing) {
         if (identifyingPath === null) {
-            // Limpa todos
             document.querySelectorAll('#soundboard-app .btn[uuid].sb-playing')
                 .forEach(el => el.classList.remove('sb-playing'));
             return;
@@ -714,26 +972,52 @@ class SoundBoard {
         }
     }
 
+    static getDirectoryForCurrentUser() {
+        if (game.user.isGM) {
+            // GM always uses the world setting
+            return game.settings.get('Soundboard-by-Jack', 'soundboardDirectory');
+        } else {
+            // Player: só pode usar o diretório definido pelo GM para ele, ou o padrão do GM
+            const playerDirs = game.settings.get('Soundboard-by-Jack', 'soundboardPlayerDirectories') || {};
+            if (playerDirs[game.user.id] && playerDirs[game.user.id].trim()) {
+                return playerDirs[game.user.id].trim();
+            }
+            // Fallback para o padrão do GM
+            const gmDefault = game.settings.get('Soundboard-by-Jack', 'soundboardDirectory');
+            return gmDefault || 'modules/Soundboard-by-Jack/exampleAudio';
+        }
+    }
+
     static async getSounds(forceRefresh = false) {
         // Não usa mais settings/localStorage para UserSounds
         const favoritesArray = game.settings.get('Soundboard-by-Jack', 'favoritedSounds');
         const source = game.settings.get('Soundboard-by-Jack', 'source');
 
+        // Get the correct directory for current user
+        let soundboardDir = SoundBoard.getDirectoryForCurrentUser();
+        console.log('SoundBoard: Usando diretório', soundboardDir);
+
         SoundBoard.soundsError = false;
         SoundBoard.soundsLoaded = false;
 
         try {
+            // Validate directory is not empty or whitespace
+            if (!soundboardDir || !soundboardDir.trim()) {
+                throw new Error('SoundBoard directory is empty or invalid. Please configure in Module Settings.');
+            }
+
+            soundboardDir = soundboardDir.trim();
             SoundBoard.sounds = {};
 
             if (typeof (ForgeVTT) !== 'undefined' && ForgeVTT.usingTheForge) {
-                const soundboardDirArray = await FilePicker.browse(source, game.settings.get('Soundboard-by-Jack', 'soundboardDirectory'), {recursive: true});
+                const soundboardDirArray = await FilePicker.browse(source, soundboardDir, {recursive: true});
 
-                if (soundboardDirArray.target !== game.settings.get('Soundboard-by-Jack', 'soundboardDirectory').replace(' ', '%20')) {
+                if (soundboardDirArray.target !== soundboardDir.replace(' ', '%20')) {
                     throw 'Filepicker target did not match input. Parent directory may be correct. Soft failure.';
                 }
 
                 const subDirs = soundboardDirArray.dirs.map((dir) => {
-                    let subDir = dir.replace(game.settings.get('Soundboard-by-Jack', 'soundboardDirectory'), '');
+                    let subDir = dir.replace(soundboardDir, '');
                     if (subDir[0] !== '/') subDir = `/${subDir}`;
                     return subDir;
                 });
@@ -802,13 +1086,13 @@ class SoundBoard {
             } else {
                 let bucket;
                 if (source === 's3') {
-                    const bucketContainer = await FilePicker.browse(source, game.settings.get('Soundboard-by-Jack', 'soundboardDirectory'));
+                    const bucketContainer = await FilePicker.browse(source, soundboardDir);
                     bucket = bucketContainer.dirs[0];
                 }
-                const soundboardDirArray = await FilePicker.browse(source, game.settings.get('Soundboard-by-Jack', 'soundboardDirectory'), {
+                const soundboardDirArray = await FilePicker.browse(source, soundboardDir, {
                     ...(bucket && { bucket })
                 });
-                if (soundboardDirArray.target !== game.settings.get('Soundboard-by-Jack', 'soundboardDirectory').replace(' ', '%20')) {
+                if (soundboardDirArray.target !== soundboardDir.replace(' ', '%20')) {
                     throw 'Filepicker target did not match input. Parent directory may be correct. Soft failure.';
                 }
 
@@ -868,10 +1152,23 @@ class SoundBoard {
             }
             // Não salva mais UserSounds em settings
         } catch (error) {
-            SoundBoard.log(error, SoundBoard.LOGTYPE.ERR);
             SoundBoard.soundsError = true;
+            const errorMsg = error?.message || error?.toString() || 'Unknown error';
+            SoundBoard.log(`Error loading sounds from directory "${soundboardDir}": ${errorMsg}`, SoundBoard.LOGTYPE.ERR);
+            
+            // Check if it's a directory issue
+            if (errorMsg.includes('empty or invalid') || errorMsg.includes('404') || errorMsg.includes('not found') || errorMsg.includes('does not exist')) {
+                if (!soundboardDir || !soundboardDir.trim()) {
+                    ui.notifications.error('SoundBoard: No directory configured. Please set it in Module Settings.');
+                } else {
+                    ui.notifications.error(`SoundBoard directory not found: "${soundboardDir}". Please check your Module Settings.`);
+                }
+            } else {
+                ui.notifications.error(game.i18n.localize('SOUNDBOARD.notif.soundsError'));
+            }
         } finally {
             await SoundBoard._getBundledSounds(forceRefresh);
+            // soundsLoaded is set to true by _getBundledSounds()
         }
     }
 
@@ -1047,6 +1344,61 @@ class SoundBoard {
     // (player soundboard removed)
 
 
+
+    // ---------------------------------------------------------------
+    // GM STOP PLAYER SOUNDS
+    // ---------------------------------------------------------------
+
+    /** Mapa de sons ativos de jogadores: { playerId: {src, identifyingPath, playerName} } */
+    static playerActiveSounds = {};
+
+    /**
+     * Para todos os sons tocados por um jogador específico.
+     * Chamado pelo GM ao clicar no badge de jogador ativo.
+     */
+    static stopPlayerSound(playerId) {
+        const entry = SoundBoard.playerActiveSounds?.[playerId];
+        if (!entry) return;
+
+        // Envia STOP para todos os clientes (mesmo caminho do stopSound normal)
+        const fakeSound = { src: [entry.src], identifyingPath: entry.identifyingPath };
+        SoundBoard.audioHelper.stop(fakeSound);
+        SoundBoard.socketHelper.sendData({
+            type: SBSocketHelper.SOCKETMESSAGETYPE.STOP,
+            payload: fakeSound
+        });
+
+        delete SoundBoard.playerActiveSounds[playerId];
+        SoundBoard._updatePlayerSoundIndicator();
+    }
+
+    /**
+     * Atualiza o badge de "jogador tocando som" na UI do GM.
+     */
+    static _updatePlayerSoundIndicator() {
+        const bar = document.getElementById('sb-player-sounds-bar');
+        if (!bar || !game.user.isGM) return;
+
+        const active = SoundBoard.playerActiveSounds || {};
+        const entries = Object.entries(active);
+
+        if (entries.length === 0) {
+            bar.style.display = 'none';
+            bar.innerHTML = '';
+            return;
+        }
+
+        bar.style.display = 'flex';
+        bar.innerHTML = entries.map(([pid, entry]) => {
+            // isLooping: badge verde pulsante; som normal: badge azul
+            const isLooping = entry.isLooping || !!SoundBoard.playerLoopSounds?.[entry.identifyingPath];
+            const cls = isLooping ? 'sb-player-badge sb-player-badge--loop' : 'sb-player-badge';
+            const icon = isLooping ? 'fa-redo' : 'fa-volume-up';
+            return `<span class="${cls}" onclick="SoundBoard.stopPlayerSound('${pid}')" title="Parar sons de ${entry.playerName}">` +
+                   `<i class="fas ${icon}"></i> ${entry.playerName} <i class="fas fa-stop"></i></span>`;
+        }).join('');
+    }
+
     static _registerSettings() {
                         // Preferências do usuário (client)
                         game.settings.register('Soundboard-by-Jack', 'nameTruncation', {
@@ -1086,6 +1438,7 @@ class SoundBoard {
                     hint: 'Salva as opções de repeat/loop para cada som individualmente.',
                     scope: 'world',
                     config: false,
+                    restricted: true,
                     type: Object,
                     default: {}
                 });
@@ -1098,11 +1451,22 @@ class SoundBoard {
             restricted: true
         });
 
+        // Menu para gerenciar diretórios dos players (apenas GM)
+        game.settings.registerMenu('Soundboard-by-Jack', 'playerDirectoryManager', {
+            name: 'Manage Player SoundBoard Directories',
+            label: 'Player Directories',
+            hint: 'Configure custom SoundBoard directories for each player.',
+            icon: 'fas fa-folder-users',
+            type: SBPlayerDirectoryManager,
+            restricted: true
+        });
+
         game.settings.register('Soundboard-by-Jack', 'soundboardDirectory', {
-            name: 'Custom SoundBoard Directory',
+            name: 'Custom SoundBoard Directory (GM)',
             hint: 'This should point to a folder containing subfolders, each containing audio files. See modules/Soundboard-by-Jack/exampleAudio/ for an example',
             scope: 'world',
             config: true,
+            restricted: true,
             default: 'modules/Soundboard-by-Jack/exampleAudio',
             type: String,
             filePicker: 'folder',
@@ -1115,11 +1479,34 @@ class SoundBoard {
             }
         });
 
+        // Opção para permitir/desabilitar SoundBoard para players
+        game.settings.register('Soundboard-by-Jack', 'allowPlayerSoundBoard', {
+            name: 'Allow Player SoundBoard',
+            hint: 'Permite que jogadores usem o SoundBoard. Se desativado, apenas o GM pode usar.',
+            scope: 'world',
+            config: true,
+            restricted: true,
+            default: true,
+            type: Boolean
+        });
+
+        // WORLD-SCOPE mapping for GM to manage player directories
+        game.settings.register('Soundboard-by-Jack', 'soundboardPlayerDirectories', {
+            name: 'Player SoundBoard Directories',
+            hint: 'Mapping of player IDs to their SoundBoard folders. Only editable via the Player Manager.',
+            scope: 'world',
+            config: false,
+            restricted: true,
+            default: {},
+            type: Object
+        });
+
         game.settings.register('Soundboard-by-Jack', 'source', {
             name: 'Source Type',
             hint: 'If your sounds are stored in your Forge Assets, select Forge. If they are stored in an S3 bucket, select S3. Otherwise, select Data',
             scope: 'world',
             config: true,
+            restricted: true,
             type: String,
             choices: { 'data': 'Data', 'forgevtt': 'Forge', 's3': 'S3' },
             default: 'data',
@@ -1131,6 +1518,7 @@ class SoundBoard {
             hint: 'Set the opacity of the SoundBoard when you are not hovering over it. 1 to disable.',
             scope: 'world',
             config: true,
+            restricted: true,
             type: Number,
             range: { min: 0.1, max: 1.0, step: 0.05 },
             default: 0.75,
@@ -1145,6 +1533,7 @@ class SoundBoard {
             hint: 'Randomly detune a sound each time it plays. 0 to disable.',
             scope: 'world',
             config: true,
+            restricted: true,
             type: Number,
             range: { min: 0, max: 100, step: 1 },
             default: 0
@@ -1155,6 +1544,7 @@ class SoundBoard {
             hint: 'Maximum characters shown on sound buttons when name truncation is active. Range: 5-50.',
             scope: 'world',
             config: true,
+            restricted: true,
             type: Number,
             range: { min: 5, max: 50, step: 1 },
             default: 15
@@ -1165,6 +1555,7 @@ class SoundBoard {
             hint: 'Enable this to allow players to trigger a sound using a macro with SoundBoard.playSoundByName()',
             scope: 'world',
             config: true,
+            restricted: true,
             type: Boolean,
             default: true
         });
@@ -1174,6 +1565,7 @@ class SoundBoard {
             hint: 'Enable this if you are having issues with the SoundBoard being cut off by the edge of the screen.',
             scope: 'world',
             config: true,
+            restricted: true,
             type: Boolean,
             default: false,
             onChange: value => { window.location.reload(); }
@@ -1181,19 +1573,19 @@ class SoundBoard {
 
         // Hidden/internal settings (config: false)
         game.settings.register('Soundboard-by-Jack', 'disabledPacks', {
-            scope: 'world', config: false, default: []
+            scope: 'world', config: false, restricted: true, default: []
         });
         game.settings.register('Soundboard-by-Jack', 'soundboardServerVolume', {
-            name: 'Server Volume', scope: 'world', config: false, type: Number, default: 100
+            name: 'Server Volume', scope: 'world', config: false, restricted: true, type: Number, default: 100
         });
         game.settings.register('Soundboard-by-Jack', 'soundboardIndividualSoundVolumes', {
-            name: 'Individual Sound Volumes', scope: 'world', config: false, type: Object, default: {}
+            name: 'Individual Sound Volumes', scope: 'world', config: false, restricted: true, type: Object, default: {}
         });
         game.settings.register('Soundboard-by-Jack', 'favoritedSounds', {
-            name: 'Favorited Sounds', scope: 'world', config: false, default: []
+            name: 'Favorited Sounds', scope: 'world', config: false, restricted: true, default: []
         });
         game.settings.register('Soundboard-by-Jack', 'savedSoundscapes', {
-            name: 'Saved Soundscapes', scope: 'world', config: false, type: Object, default: {}
+            name: 'Saved Soundscapes', scope: 'world', config: false, restricted: true, type: Object, default: {}
         });
     }
 
@@ -1214,14 +1606,119 @@ class SoundBoard {
         // Handlebars helpers needed by all users (player board uses them too)
         Handlebars.registerHelper(SoundBoard.handlebarsHelpers);
 
+        // IMPORTANTE: inicializar helpers ANTES de qualquer operação que os use
+        // (syncPlayerSoundsToAll precisa de socketHelper; play precisa de audioHelper)
+        SoundBoard.socketHelper = new SBSocketHelper();
+        SoundBoard.audioHelper = new SBAudioHelper();
+
         if (game.user.isGM) {
             SoundBoard.soundsError = false;
             await SoundBoard.getSounds();
             Handlebars.registerPartial('SoundBoardPackageCard', await foundry.applications.handlebars.getTemplate('modules/Soundboard-by-Jack/templates/partials/packagecard.hbs'));
+            
+            // Enviar lista de sons para cada jogador já conectado
+            await SoundBoard.syncPlayerSoundsToAll();
+        }
+    }
+    
+    // Carregar sons de um diretório específico (sem alterar SoundBoard.sounds global).
+    // Espelha a lógica do getSounds principal: browse não-recursivo, categoria por subdir.
+    static async loadSoundsFromDirectory(directory, source) {
+        const sounds = {};
+        const VALID_EXTS = ['.ogg', '.oga', '.mp3', '.wav', '.webm', '.opus', 'flac'];
+        const isValidAudio = (f) => VALID_EXTS.includes(f.substring(f.length - 4).toLowerCase());
+
+        try {
+            if (!directory || !directory.trim()) return sounds;
+            const dir = directory.trim();
+            const src = source || 'data';
+
+            const topLevel = await FilePicker.browse(src, dir);
+            console.log(`SoundBoard: loadSoundsFromDirectory "${dir}" → ${topLevel.dirs.length} categorias, ${topLevel.files.length} arquivos no topo`);
+
+            for (const subDir of topLevel.dirs) {
+                const categoryName = this._formatName(subDir.split(/[/]+/).pop(), false);
+                sounds[categoryName] = [];
+
+                const innerLevel = await FilePicker.browse(src, subDir);
+
+                // Arquivos direto na categoria
+                for (const file of innerLevel.files) {
+                    if (isValidAudio(file)) {
+                        sounds[categoryName].push({
+                            name: this._formatName(file.split(/[/]+/).pop()),
+                            src: [file],
+                            identifyingPath: file,
+                            isWild: false,
+                            isFavorite: false
+                        });
+                    } else {
+                        SoundBoard.log(`${file} ${game.i18n.localize('SOUNDBOARD.log.invalidSound')}`, SoundBoard.LOGTYPE.WARN);
+                    }
+                }
+
+                // Subpastas wildcard (grupo de variações do mesmo som)
+                for (const wildcardDir of innerLevel.dirs) {
+                    const wildcardBrowse = await FilePicker.browse(src, wildcardDir);
+                    const validFiles = wildcardBrowse.files.filter(isValidAudio);
+                    if (validFiles.length > 0) {
+                        sounds[categoryName].push({
+                            name: this._formatName(wildcardDir.split(/[/]+/).pop(), false),
+                            src: validFiles,
+                            identifyingPath: wildcardDir,
+                            isWild: true,
+                            isFavorite: false
+                        });
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('SoundBoard: Erro ao carregar sons de', directory, e);
+        }
+        return sounds;
+    }
+    
+    // Enviar sons de cada jogador para ele mesmo
+    // Sincronizar sons de um jogador específico (usado no ready e no userConnected)
+    static async syncSoundsForPlayer(playerId) {
+        if (!game.user.isGM) return;
+        const player = game.users.get(playerId);
+        if (!player || player.isGM) return;
+
+        const playerDirs = game.settings.get('Soundboard-by-Jack', 'soundboardPlayerDirectories') || {};
+        const source = game.settings.get('Soundboard-by-Jack', 'source') || 'data';
+        const playerDir = playerDirs[playerId];
+
+        let playerSounds;
+        if (playerDir && playerDir.trim()) {
+            console.log(`SoundBoard: Carregando sons de ${player.name} de "${playerDir}"`);
+            playerSounds = await SoundBoard.loadSoundsFromDirectory(playerDir, source);
+            const totalSounds = Object.values(playerSounds).reduce((n, arr) => n + arr.length, 0);
+            if (totalSounds === 0) {
+                console.warn(`SoundBoard: Diretório "${playerDir}" retornou 0 sons para ${player.name} — usando sons do GM como fallback.`);
+                playerSounds = SoundBoard.sounds;
+            }
+        } else {
+            // Sem diretório específico: usa os sons do GM como fallback
+            console.log(`SoundBoard: Sem diretório para ${player.name} — enviando sons do GM.`);
+            playerSounds = SoundBoard.sounds;
         }
 
-        SoundBoard.socketHelper = new SBSocketHelper();
-        SoundBoard.audioHelper = new SBAudioHelper();
+        SoundBoard.socketHelper.sendData({
+            type: SBSocketHelper.SOCKETMESSAGETYPE.SYNC_PLAYER_SOUNDS,
+            playerId,
+            sounds: playerSounds
+        });
+    }
+
+    // Enviar sons para todos os jogadores conectados
+    static async syncPlayerSoundsToAll() {
+        if (!game.user.isGM) return;
+        for (const player of game.users.contents) {
+            if (player.isGM) continue;
+            await SoundBoard.syncSoundsForPlayer(player.id);
+        }
+        console.log('SoundBoard: Sincronização de sons de jogadores concluída');
     }
 
     static addSoundBoard(controls) {
@@ -1268,3 +1765,102 @@ Hooks.once('ready', SoundBoard.onReady);
 Hooks.on('getSceneControlButtons', SoundBoard.addSoundBoard);
 Hooks.on('renderSidebarTab', SoundBoard.addCustomPlaylistElements);
 Hooks.on('renderPlaylistDirectory', SoundBoard.addCustomPlaylistElements);
+
+// Hook: quando um jogador conecta, GM sincroniza os sons dele automaticamente
+Hooks.on('userConnected', (user, connected) => {
+    if (!game.user.isGM) return;
+    if (!connected || user.isGM) return;
+    // Aguarda 2s para garantir que o socket do jogador está pronto
+    setTimeout(async () => {
+        console.log(`SoundBoard: Jogador ${user.name} conectou — sincronizando sons.`);
+        await SoundBoard.syncSoundsForPlayer(user.id);
+    }, 2000);
+});
+
+// Esconder configurações do SoundBoard para jogadores não-GM
+Hooks.on('renderSettingsConfig', (app, element) => {
+    if (game.user.isGM) return;
+    const el = element instanceof HTMLElement ? element : element[0];
+    if (!el) return;
+
+    // V14: procura seção/categoria do módulo e esconde tudo dela
+    // Tenta por data-module, data-setting-id, e text content do cabeçalho
+    const selectors = [
+        '[data-setting-id^="Soundboard-by-Jack."]',
+        '[data-key^="Soundboard-by-Jack."]',
+        '[name^="Soundboard-by-Jack."]'
+    ];
+    selectors.forEach(sel => {
+        el.querySelectorAll(sel).forEach(node => {
+            (node.closest('.form-group') ?? node.closest('li') ?? node).remove();
+        });
+    });
+
+    // Esconde cabeçalhos de seção do módulo (V14 usa <section data-category="...">)
+    el.querySelectorAll('section[data-category], [data-module]').forEach(section => {
+        const cat = section.dataset.category ?? section.dataset.module ?? '';
+        if (cat.toLowerCase().includes('soundboard')) section.remove();
+    });
+
+    // Fallback: esconde por texto do heading
+    el.querySelectorAll('h2, h3, .settings-header').forEach(h => {
+        if (/soundboard/i.test(h.textContent)) {
+            let el2 = h;
+            // Remove o heading e todos os form-groups seguintes até o próximo heading
+            const toRemove = [el2];
+            let next = el2.nextElementSibling;
+            while (next && !next.matches('h2, h3, .settings-header')) {
+                toRemove.push(next);
+                next = next.nextElementSibling;
+            }
+            toRemove.forEach(n => n.remove());
+        }
+    });
+});
+
+// CSS dos badges de jogador ativo (injetado uma vez)
+(function injectPlayerBadgeCSS() {
+    const id = 'sb-player-badge-style';
+    if (document.getElementById(id)) return;
+    const style = document.createElement('style');
+    style.id = id;
+    style.textContent = `
+        #sb-player-sounds-bar {
+            display: none;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 4px 8px;
+            background: rgba(0,0,0,0.25);
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .sb-player-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #1a3a5c;
+            border: 1px solid #2c6aa0;
+            border-radius: 10px;
+            padding: 2px 8px;
+            font-size: 10px;
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.15s, border-color 0.15s;
+            user-select: none;
+        }
+        .sb-player-badge:hover { background: #c62828; border-color: #e57373; }
+        .sb-player-badge .fa-volume-up { color: #7ab3e0; font-size: 9px; }
+        .sb-player-badge .fa-stop { color: #e84030; font-size: 8px; }
+        /* Badge de loop: verde pulsante */
+        .sb-player-badge--loop {
+            background: #0d3320;
+            border-color: #2e7d32;
+            animation: sb-badge-pulse 2s infinite;
+        }
+        .sb-player-badge--loop .fa-redo { color: #66bb6a; font-size: 9px; }
+        @keyframes sb-badge-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(46,125,50,0.6); }
+            50%       { box-shadow: 0 0 0 4px rgba(46,125,50,0); }
+        }
+    `;
+    document.head.appendChild(style);
+})();
