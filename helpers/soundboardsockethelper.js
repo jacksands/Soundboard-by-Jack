@@ -11,7 +11,8 @@ class SBSocketHelper {
         REQUESTMACROPLAY: 7,
         SYNC_PLAYER_SOUNDS: 8,
         PLAYER_PLAY_REQUEST: 9,
-        REQUEST_SYNC: 10
+        REQUEST_SYNC: 10,
+        PLAYER_STOP_LOOP: 11   // Jogador pede ao GM para cancelar loop em andamento
     }
 
     constructor() {
@@ -47,32 +48,56 @@ class SBSocketHelper {
                         if (!SoundBoard.playerActiveSounds) SoundBoard.playerActiveSounds = {};
                         SoundBoard.playerActiveSounds[playerId] = {
                             src, identifyingPath: identifyingPath ?? src,
-                            playerName: playerName ?? 'Jogador',
+                            playerName: playerName ?? 'Player',
                             isLooping: !!loop
                         };
                         SoundBoard._updatePlayerSoundIndicator();
                     }
 
-                    // Se é um som com loop, guarda no mapa de loops de jogadores
+                    // Se é um loop, guarda no mapa de loops de jogadores
                     if (loop && identifyingPath) {
                         if (!SoundBoard.playerLoopSounds) SoundBoard.playerLoopSounds = {};
                         SoundBoard.playerLoopSounds[identifyingPath] = {
                             src, volume: vol, identifyingPath,
-                            playerId, playerName: playerName ?? 'Jogador',
+                            playerId, playerName: playerName ?? 'Player',
                             loopMode: loopMode || 'simple',
                             loopDelayMin: loopDelayMin || 0,
                             loopDelayMax: loopDelayMax || 0
                         };
                     }
 
-                    // Toca no GM (sem loop nativo — o loop é gerenciado pelo _schedulePlayerLoop)
+                    // Toca no GM e broadcast para todos os clientes
                     SoundBoard.audioHelper.play(payload, soundExtras);
-
-                    // Broadcast para todos os outros clientes
                     SoundBoard.socketHelper.sendData({
                         type: SBSocketHelper.SOCKETMESSAGETYPE.PLAY,
                         payload,
                         soundExtras
+                    });
+                    break;
+                }
+
+                case SBSocketHelper.SOCKETMESSAGETYPE.PLAYER_STOP_LOOP: {
+                    // Jogador pediu para cancelar seu loop
+                    const { identifyingPath, src } = data.payload;
+
+                    // Remove do mapa de loops
+                    if (SoundBoard.playerLoopSounds?.[identifyingPath]) {
+                        const entry = SoundBoard.playerLoopSounds[identifyingPath];
+                        // Atualiza badge: não mais em loop
+                        const pid = entry.playerId;
+                        if (pid && SoundBoard.playerActiveSounds?.[pid]) {
+                            delete SoundBoard.playerActiveSounds[pid];
+                            SoundBoard._updatePlayerSoundIndicator();
+                        }
+                        delete SoundBoard.playerLoopSounds[identifyingPath];
+                    }
+
+                    // Para o áudio no GM e em todos os outros clientes
+                    const fakeSound = { src: Array.isArray(src) ? src : [src], identifyingPath };
+                    SoundBoard.audioHelper.stop(fakeSound);
+                    SoundBoard.socketHelper.sendData({
+                        type: SBSocketHelper.SOCKETMESSAGETYPE.STOP,
+                        payload: fakeSound
                     });
                     break;
                 }
@@ -116,7 +141,7 @@ class SBSocketHelper {
                         SoundBoard.sounds = data.sounds || {};
                         SoundBoard.soundsLoaded = true;
                         SoundBoard.soundsError = false;
-                        ui.notifications.info(`SoundBoard: ${total} sons sincronizados pelo GM!`);
+                        ui.notifications.info(`SoundBoard: ${total} sounds synced from GM!`);
                         if (SoundBoard.openedBoard?.rendered) {
                             SoundBoard.openedBoard.render();
                         }

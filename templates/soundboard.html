@@ -186,17 +186,16 @@
         </button>
     </div>
 
-    <div id="volume-container" class="row no-gutters">
-        <button id="stop-all" class="btn btn-danger col"
+    <div id="volume-container">
+        <button id="stop-all" class="btn btn-danger"
                 onclick="SoundBoard.stopAllSounds()">{{localize 'SOUNDBOARD.app.stopAll'}}
         </button>
-        <p id="volume-text" class="col text-right">{{localize 'SOUNDBOARD.app.volume'}}</p>
-        <input type="range" min="1" max="100" value="{{volume}}" class="slider col" id="volumeRange"
+        {{#if isGM}}<div id="sb-player-sounds-bar"></div>{{/if}}
+        <p id="volume-text">{{localize 'SOUNDBOARD.app.volume'}}</p>
+        <input type="range" min="1" max="100" value="{{volume}}" class="slider" id="volumeRange"
                onchange="SoundBoard.updateVolume(this.value)">
     </div>
-{{#if isGM}}<div id="sb-player-sounds-bar"></div>{{/if}}
-
-    {{#if isExampleAudio}}
+{{#if isExampleAudio}}
     <p class="text-muted notes sb-warning">{{localize 'SOUNDBOARD.app.exampleWarning'}}</p>
     {{/if}}
     <p class="text-muted notes">{{localize 'SOUNDBOARD.app.instructions'}}</p>

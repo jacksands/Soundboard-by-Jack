@@ -76,13 +76,13 @@ class SBPlayerDirectoryManager extends foundry.applications.api.ApplicationV2 {
         <div style="padding: 12px;">
             <div style="margin-bottom: 12px; padding: 8px; background: #333; border-radius: 4px; font-size: 12px; color: #ccc; border-left: 3px solid #2c5aa0;">
                 <strong>Manage Player SoundBoard Directories</strong><br/>
-                Assign folders for each player. Leave empty to let players use their own settings.
+                Assign a sound folder to each player. Leave empty to use the GM folder as fallback.
             </div>
             <div style="max-height: 380px; overflow-y: auto;">
                 ${playerRows.length > 0 ? playerRows : '<p style="color: #999; text-align: center;">No players found.</p>'}
             </div>
             <div style="text-align:right; margin-top:10px;">
-                <button id="sb-player-dir-close-btn" style="padding:6px 18px;background:#444;color:#fff;border:none;border-radius:3px;cursor:pointer;font-weight:bold;">Fechar</button>
+                <button id="sb-player-dir-close-btn" style="padding:6px 18px;background:#444;color:#fff;border:none;border-radius:3px;cursor:pointer;font-weight:bold;">Close</button>
             </div>
         </div>
         `;
@@ -262,14 +262,14 @@ class SoundBoard {
         // Só permite abrir se for GM ou se a opção permitir
         const allowPlayers = game.settings.get('Soundboard-by-Jack', 'allowPlayerSoundBoard');
         if (!game.user.isGM && !allowPlayers) {
-            ui.notifications.warn('SoundBoard: O GM desativou o SoundBoard para jogadores.');
+            ui.notifications.warn('SoundBoard: The GM has disabled the Player SoundBoard.');
             return;
         }
         if (!game.user.isGM) {
             console.log(`SoundBoard (Player): Sons carregados: ${SoundBoard.soundsLoaded}, Categorias: ${Object.keys(SoundBoard.sounds).length}`);
             if (!SoundBoard.soundsLoaded || Object.keys(SoundBoard.sounds).length === 0) {
                 // Pede ao GM para enviar os sons agora
-                ui.notifications.warn('SoundBoard: Solicitando sons ao GM...');
+                ui.notifications.info('SoundBoard: Requesting sounds from GM...');
                 if (SoundBoard.socketHelper) {
                     SoundBoard.socketHelper.sendData({
                         type: SBSocketHelper.SOCKETMESSAGETYPE.REQUEST_SYNC,
@@ -283,9 +283,9 @@ class SoundBoard {
         if (SoundBoard.soundsError) {
             const dir = SoundBoard.getDirectoryForCurrentUser();
             if (!dir || !dir.trim()) {
-                ui.notifications.warn('SoundBoard: Nenhum diretório configurado. Configure em "Module Settings > My SoundBoard Directory".');
+                ui.notifications.warn('SoundBoard: No directory configured. Please set one in Module Settings > SoundBoard Directory.');
             } else {
-                ui.notifications.error(`SoundBoard Error: Diretório "${dir}" não encontrado ou inacessível. Verifique Module Settings.`);
+                ui.notifications.error(`SoundBoard Error: Directory "${dir}" not found or inaccessible. Check Module Settings.`);
             }
         }
         
@@ -305,7 +305,7 @@ class SoundBoard {
     static async openSoundBoardFav() {
         // Para jogadores, os sons são recebidos via socket pelo GM
         if (!game.user.isGM && (!SoundBoard.soundsLoaded || Object.keys(SoundBoard.sounds).length === 0)) {
-            ui.notifications.warn('SoundBoard: Aguardando sincronização de sons pelo GM...');
+            ui.notifications.warn('SoundBoard: Waiting for GM to sync sounds...');
         }
         if (SoundBoard.openedBoard && SoundBoard.openedBoard.rendered) {
             SoundBoard.openedBoard.close();
@@ -317,7 +317,7 @@ class SoundBoard {
     static async openSoundBoardBundled() {
         // Para jogadores, os sons são recebidos via socket pelo GM
         if (!game.user.isGM && (!SoundBoard.soundsLoaded || Object.keys(SoundBoard.sounds).length === 0)) {
-            ui.notifications.warn('SoundBoard: Aguardando sincronização de sons pelo GM...');
+            ui.notifications.warn('SoundBoard: Waiting for GM to sync sounds...');
         }
         if (SoundBoard.openedBoard && SoundBoard.openedBoard.rendered) {
             SoundBoard.openedBoard.close();
@@ -327,11 +327,8 @@ class SoundBoard {
     }
 
     static openSoundBoardHelp() {
-        if (SoundBoard.openedBoard && SoundBoard.openedBoard.rendered) {
-            SoundBoard.openedBoard.close();
-        }
-        SoundBoard.openedBoard = new SoundBoardHelp();
-        SoundBoard.openedBoard.render(true);
+        // Abre o help sem fechar o soundboard principal
+        new SoundBoardHelp().render(true);
     }
 
     static openSoundBoardPackageManager() {
@@ -725,11 +722,22 @@ class SoundBoard {
     static stopLoop(identifyingPath) {
         const sound = SoundBoard.getSoundFromIdentifyingPath(identifyingPath);
         sound.loop = false;
-        // Cancela loop de jogador se existir
+
+        if (!game.user.isGM) {
+            // Jogador: para áudio local e pede ao GM para cancelar o loop dele
+            SoundBoard.audioHelper.stop(sound);
+            SoundBoard.socketHelper.sendData({
+                type: SBSocketHelper.SOCKETMESSAGETYPE.PLAYER_STOP_LOOP,
+                payload: { identifyingPath, src: sound.src }
+            });
+            document.querySelectorAll(`#soundboard-app .btn[uuid="${CSS.escape(identifyingPath)}"]`).forEach(btn => btn.classList.remove('loop-active'));
+            return;
+        }
+
+        // GM: cancela loop local, para áudio e notifica todos os clientes
         if (SoundBoard.playerLoopSounds?.[identifyingPath]) {
             delete SoundBoard.playerLoopSounds[identifyingPath];
         }
-        // Para o áudio imediatamente e notifica os outros clientes
         SoundBoard.audioHelper.stop(sound);
         SoundBoard.socketHelper.sendData({
             type: SBSocketHelper.SOCKETMESSAGETYPE.STOP,
@@ -1383,12 +1391,9 @@ class SoundBoard {
         const entries = Object.entries(active);
 
         if (entries.length === 0) {
-            bar.style.display = 'none';
             bar.innerHTML = '';
             return;
         }
-
-        bar.style.display = 'flex';
         bar.innerHTML = entries.map(([pid, entry]) => {
             // isLooping: badge verde pulsante; som normal: badge azul
             const isLooping = entry.isLooping || !!SoundBoard.playerLoopSounds?.[entry.identifyingPath];
@@ -1455,7 +1460,7 @@ class SoundBoard {
         game.settings.registerMenu('Soundboard-by-Jack', 'playerDirectoryManager', {
             name: 'Manage Player SoundBoard Directories',
             label: 'Player Directories',
-            hint: 'Configure custom SoundBoard directories for each player.',
+            hint: 'Configure custom SoundBoard directories for each player. Leave empty to use the GM folder as fallback.',
             icon: 'fas fa-folder-users',
             type: SBPlayerDirectoryManager,
             restricted: true
@@ -1826,12 +1831,12 @@ Hooks.on('renderSettingsConfig', (app, element) => {
     style.id = id;
     style.textContent = `
         #sb-player-sounds-bar {
-            display: none;
-            flex-wrap: wrap;
-            gap: 4px;
-            padding: 4px 8px;
-            background: rgba(0,0,0,0.25);
-            border-top: 1px solid rgba(255,255,255,0.1);
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 3px;
+            padding: 0 4px;
+            overflow: hidden;
         }
         .sb-player-badge {
             display: inline-flex;

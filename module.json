@@ -2,7 +2,7 @@
   "id": "Soundboard-by-Jack",
   "title": "SoundBoard by Jack",
   "description": "Simple soundboard for the Gamemaster, broadcasted to all connected clients.",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "scripts": [
     "soundboard.js",
     "apps/soundboardapp.js",
@@ -30,20 +30,20 @@
     },
     {
       "lang": "es",
-      "name": "Espa\u00f1ol",
+      "name": "Español",
       "path": "languages/es.json",
       "flags": {}
     },
     {
       "lang": "ja",
-      "name": "\u65e5\u672c\u8a9e",
+      "name": "日本語",
       "path": "languages/ja.json",
       "flags": {}
     }
   ],
   "socket": true,
   "compatibility": {
-    "minimum": "14",
+    "minimum": "13",
     "verified": "14.360",
     "maximum": "14"
   },
