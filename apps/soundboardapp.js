@@ -124,7 +124,8 @@ class SoundBoardApplication extends foundry.appv1.api.Application {
                 });
             }
         });
-        var volume = game.settings.get('Soundboard-by-Jack', 'soundboardServerVolume');
+        // Use per-client volume (moduleGeneralVolume) so the slider reflects this client's setting
+        var volume = game.settings.get('Soundboard-by-Jack', 'moduleGeneralVolume') ?? 90;
         var collapse = totalCount > 2000;
         // V14: game.users.entities removed, use game.users.contents
         var players = game.users.contents.filter((el) => el.active && !el.isGM).map((el) => {

@@ -177,7 +177,15 @@ const checkRender = setInterval(() => {
             <li>Go to <b>Module Settings → Player Directories</b> and assign a sound folder to each player. Leave empty to use the GM folder as fallback.</li>
             <li>Use the <b>Player SoundBoard Macro</b> section below to share the macro with players</li>
             </ol>
-            <p>Sounds played by players are broadcast globally. The GM sees a live badge in the footer for each player currently playing a sound — click it to stop that player's sound.</p>`
+            <p>Sounds played by players are broadcast globally to all connected players.</p>
+            <p><b>GM footer badges:</b> The footer shows one badge per connected player. Each badge indicates the player's current state:</p>
+            <ul>
+            <li><b>Blue border</b> — player is actively playing a sound. Click the <b>⏹</b> inside the badge to stop it.</li>
+            <li><b>Green pulsing border</b> — player has a looping sound active. Click <b>⏹</b> to stop.</li>
+            <li><b>Red tint</b> — player is <b>muted</b>. Any sound they try to play will be silently ignored.</li>
+            </ul>
+            <p><b>Click a badge</b> to toggle mute/unmute for that player. Muting also immediately stops any sound they are currently playing.</p>
+            <p><b>Mute-all button</b> (leftmost icon in the footer) mutes or unmutes all connected players at once.</p>`
         }, {
             title: 'Player SoundBoard Macro',
             body: `<p>Players access their SoundBoard via the <b>"soundboard"</b> macro.</p>

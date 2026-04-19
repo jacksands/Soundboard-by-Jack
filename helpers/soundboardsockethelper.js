@@ -66,7 +66,10 @@ class SBSocketHelper {
                         };
                     }
 
-                    // Toca no GM e broadcast para todos os clientes
+                    // Check mute state — if player is muted, skip entirely
+                    if (SoundBoard.playerMuteStates?.[playerId]) break;
+
+                    // Play on GM and broadcast to all clients
                     SoundBoard.audioHelper.play(payload, soundExtras);
                     SoundBoard.socketHelper.sendData({
                         type: SBSocketHelper.SOCKETMESSAGETYPE.PLAY,

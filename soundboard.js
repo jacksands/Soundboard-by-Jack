@@ -346,13 +346,19 @@ class SoundBoard {
     static updateVolume(volumePercentage) {
         let volume = volumePercentage / 100;
         SoundBoard.audioHelper.onVolumeChange(volume);
-        SoundBoard.socketHelper.sendData({
-            type: SBSocketHelper.SOCKETMESSAGETYPE.VOLUMECHANGE,
-            payload: {
-                volume
-            }
-        });
-        game.settings.set('Soundboard-by-Jack', 'soundboardServerVolume', volumePercentage);
+        // Save locally (client-scope for GM controls global volume via socket;
+        // players only update their own local volume used in PLAYER_PLAY_REQUEST)
+        game.settings.set('Soundboard-by-Jack', 'moduleGeneralVolume', volumePercentage);
+        if (game.user.isGM) {
+            // GM broadcasts volume change to all clients
+            SoundBoard.socketHelper.sendData({
+                type: SBSocketHelper.SOCKETMESSAGETYPE.VOLUMECHANGE,
+                payload: { volume }
+            });
+            game.settings.set('Soundboard-by-Jack', 'soundboardServerVolume', volumePercentage);
+        }
+        // Non-GM: volume stored in moduleGeneralVolume (client-scope) and used
+        // in PLAYER_PLAY_REQUEST payload — does not affect other clients.
     }
 
     static updateVolumeForSound(volumePercentage, identifyingPath) {
@@ -1357,51 +1363,136 @@ class SoundBoard {
     // GM STOP PLAYER SOUNDS
     // ---------------------------------------------------------------
 
-    /** Mapa de sons ativos de jogadores: { playerId: {src, identifyingPath, playerName} } */
+    /** Active player sounds: { playerId: {src, identifyingPath, playerName} } */
     static playerActiveSounds = {};
 
-    /**
-     * Para todos os sons tocados por um jogador específico.
-     * Chamado pelo GM ao clicar no badge de jogador ativo.
-     */
-    static stopPlayerSound(playerId) {
-        const entry = SoundBoard.playerActiveSounds?.[playerId];
-        if (!entry) return;
+    /** Muted player volumes: { playerId: previousVolume } — null means not muted */
+    static playerMuteStates = {};
 
-        // Envia STOP para todos os clientes (mesmo caminho do stopSound normal)
-        const fakeSound = { src: [entry.src], identifyingPath: entry.identifyingPath };
-        SoundBoard.audioHelper.stop(fakeSound);
-        SoundBoard.socketHelper.sendData({
-            type: SBSocketHelper.SOCKETMESSAGETYPE.STOP,
-            payload: fakeSound
-        });
+    /** Get safe display name: user.name only, max 10 chars */
+    static _playerDisplayName(playerId) {
+        const user = game.users?.get(playerId);
+        const name = user?.name ?? 'Player';
+        return name.length > 10 ? name.slice(0, 10) + '…' : name;
+    }
 
-        delete SoundBoard.playerActiveSounds[playerId];
+    /** Toggle mute for a specific player. Also stops any sound currently playing from them. */
+    static toggleMutePlayer(playerId) {
+        if (!SoundBoard.playerMuteStates) SoundBoard.playerMuteStates = {};
+        const isMuted = SoundBoard.playerMuteStates[playerId] != null;
+        if (isMuted) {
+            delete SoundBoard.playerMuteStates[playerId];
+        } else {
+            SoundBoard.playerMuteStates[playerId] = true;
+            // Stop any sound currently playing from this player
+            if (SoundBoard.playerActiveSounds?.[playerId]) {
+                SoundBoard.stopPlayerSound(playerId);
+                return; // stopPlayerSound already calls _updatePlayerSoundIndicator
+            }
+        }
         SoundBoard._updatePlayerSoundIndicator();
     }
 
-    /**
-     * Atualiza o badge de "jogador tocando som" na UI do GM.
-     */
+    /** Mute/unmute all connected players. Also stops all active player sounds when muting. */
+    static toggleMuteAllPlayers() {
+        if (!SoundBoard.playerMuteStates) SoundBoard.playerMuteStates = {};
+        const players = game.users?.contents.filter(u => !u.isGM && u.active) ?? [];
+        const allMuted = players.length > 0 && players.every(u => SoundBoard.playerMuteStates[u.id] != null);
+        if (allMuted) {
+            players.forEach(u => delete SoundBoard.playerMuteStates[u.id]);
+        } else {
+            // Mute all and stop any active sounds
+            players.forEach(u => { SoundBoard.playerMuteStates[u.id] = true; });
+            players.forEach(u => {
+                if (SoundBoard.playerActiveSounds?.[u.id]) {
+                    const entry = SoundBoard.playerActiveSounds[u.id];
+                    const fakeSound = { src: [entry.src], identifyingPath: entry.identifyingPath };
+                    SoundBoard.audioHelper.stop(fakeSound);
+                    SoundBoard.socketHelper.sendData({ type: SBSocketHelper.SOCKETMESSAGETYPE.STOP, payload: fakeSound });
+                    delete SoundBoard.playerActiveSounds[u.id];
+                }
+                // Cancel any player loops
+                if (SoundBoard.playerLoopSounds) {
+                    for (const [id, loop] of Object.entries(SoundBoard.playerLoopSounds)) {
+                        if (loop.playerId === u.id) delete SoundBoard.playerLoopSounds[id];
+                    }
+                }
+            });
+        }
+        SoundBoard._updatePlayerSoundIndicator();
+    }
+
+    /** Stop all sounds from a specific player */
+    static stopPlayerSound(playerId) {
+        const entry = SoundBoard.playerActiveSounds?.[playerId];
+        if (entry) {
+            const fakeSound = { src: [entry.src], identifyingPath: entry.identifyingPath };
+            SoundBoard.audioHelper.stop(fakeSound);
+            SoundBoard.socketHelper.sendData({
+                type: SBSocketHelper.SOCKETMESSAGETYPE.STOP,
+                payload: fakeSound
+            });
+            delete SoundBoard.playerActiveSounds[playerId];
+        }
+        // Also cancel any player loop
+        if (SoundBoard.playerLoopSounds) {
+            for (const [id, entry] of Object.entries(SoundBoard.playerLoopSounds)) {
+                if (entry.playerId === playerId) {
+                    delete SoundBoard.playerLoopSounds[id];
+                }
+            }
+        }
+        SoundBoard._updatePlayerSoundIndicator();
+    }
+
+    /** Rebuild the player badges in the footer bar (GM only) */
     static _updatePlayerSoundIndicator() {
         const bar = document.getElementById('sb-player-sounds-bar');
         if (!bar || !game.user.isGM) return;
 
-        const active = SoundBoard.playerActiveSounds || {};
-        const entries = Object.entries(active);
-
-        if (entries.length === 0) {
+        const activePlayers = game.users?.contents.filter(u => !u.isGM && u.active) ?? [];
+        if (activePlayers.length === 0) {
             bar.innerHTML = '';
             return;
         }
-        bar.innerHTML = entries.map(([pid, entry]) => {
-            // isLooping: badge verde pulsante; som normal: badge azul
-            const isLooping = entry.isLooping || !!SoundBoard.playerLoopSounds?.[entry.identifyingPath];
-            const cls = isLooping ? 'sb-player-badge sb-player-badge--loop' : 'sb-player-badge';
-            const icon = isLooping ? 'fa-redo' : 'fa-volume-up';
-            return `<span class="${cls}" onclick="SoundBoard.stopPlayerSound('${pid}')" title="Parar sons de ${entry.playerName}">` +
-                   `<i class="fas ${icon}"></i> ${entry.playerName} <i class="fas fa-stop"></i></span>`;
-        }).join('');
+
+        const active = SoundBoard.playerActiveSounds || {};
+        const muted  = SoundBoard.playerMuteStates  || {};
+        const allMuted = activePlayers.every(u => muted[u.id] != null);
+
+        // One badge per connected player + a mute-all button
+        const badges = activePlayers.map(user => {
+            const pid   = user.id;
+            const label = SoundBoard._playerDisplayName(pid);
+            const isMuted   = muted[pid] != null;
+            const hasSound  = !!active[pid];
+            const isLooping = hasSound && (active[pid]?.isLooping || !!SoundBoard.playerLoopSounds?.[active[pid]?.identifyingPath]);
+
+            const badgeCls = [
+                'sb-player-badge',
+                isMuted   ? 'sb-player-badge--muted'  : '',
+                isLooping ? 'sb-player-badge--loop'   : '',
+                hasSound  ? 'sb-player-badge--active'  : ''
+            ].filter(Boolean).join(' ');
+
+            const volIcon = isMuted ? 'fa-volume-mute' : (isLooping ? 'fa-redo' : 'fa-volume-up');
+            const muteTitle = isMuted ? `Unmute ${label}` : `Mute ${label}`;
+            const stopBtn   = hasSound
+                ? `<i class="fas fa-stop sb-badge-stop" onclick="event.stopPropagation();SoundBoard.stopPlayerSound('${pid}')" title="Stop ${label}'s sound"></i>`
+                : '';
+
+            return `<span class="${badgeCls}" onclick="SoundBoard.toggleMutePlayer('${pid}')" title="${muteTitle}">` +
+                   `<i class="fas ${volIcon}"></i>${label}${stopBtn}</span>`;
+        });
+
+        // Mute-all button
+        const muteAllIcon  = allMuted ? 'fa-volume-mute' : 'fa-volume-off';
+        const muteAllTitle = allMuted ? 'Unmute all players' : 'Mute all players';
+        const muteAllBtn   = `<span class="sb-player-badge sb-mute-all ${allMuted ? 'sb-player-badge--muted' : ''}" ` +
+                             `onclick="SoundBoard.toggleMuteAllPlayers()" title="${muteAllTitle}">` +
+                             `<i class="fas ${muteAllIcon}"></i></span>`;
+
+        bar.innerHTML = muteAllBtn + badges.join('');
     }
 
     static _registerSettings() {
@@ -1621,8 +1712,10 @@ class SoundBoard {
             await SoundBoard.getSounds();
             Handlebars.registerPartial('SoundBoardPackageCard', await foundry.applications.handlebars.getTemplate('modules/Soundboard-by-Jack/templates/partials/packagecard.hbs'));
             
-            // Enviar lista de sons para cada jogador já conectado
+            // Send sounds to each connected player
             await SoundBoard.syncPlayerSoundsToAll();
+            // Build initial player badges for all connected players
+            SoundBoard._updatePlayerSoundIndicator();
         }
     }
     
@@ -1771,13 +1864,14 @@ Hooks.on('getSceneControlButtons', SoundBoard.addSoundBoard);
 Hooks.on('renderSidebarTab', SoundBoard.addCustomPlaylistElements);
 Hooks.on('renderPlaylistDirectory', SoundBoard.addCustomPlaylistElements);
 
-// Hook: quando um jogador conecta, GM sincroniza os sons dele automaticamente
+// Hook: when a player connects/disconnects, GM syncs sounds and rebuilds badges
 Hooks.on('userConnected', (user, connected) => {
-    if (!game.user.isGM) return;
-    if (!connected || user.isGM) return;
-    // Aguarda 2s para garantir que o socket do jogador está pronto
+    if (!game.user.isGM || user.isGM) return;
+    // Rebuild badges immediately (player count changed)
+    SoundBoard._updatePlayerSoundIndicator();
+    if (!connected) return;
     setTimeout(async () => {
-        console.log(`SoundBoard: Jogador ${user.name} conectou — sincronizando sons.`);
+        console.log(`SoundBoard: Player ${user.name} connected — syncing sounds.`);
         await SoundBoard.syncSoundsForPlayer(user.id);
     }, 2000);
 });
@@ -1832,40 +1926,63 @@ Hooks.on('renderSettingsConfig', (app, element) => {
     style.textContent = `
         #sb-player-sounds-bar {
             display: flex;
-            flex-wrap: nowrap;
+            flex-wrap: wrap;
             align-items: center;
-            gap: 3px;
-            padding: 0 4px;
+            gap: 2px;
+            padding: 0 2px;
             overflow: hidden;
+            max-height: 36px;
         }
         .sb-player-badge {
             display: inline-flex;
             align-items: center;
-            gap: 4px;
-            background: #1a3a5c;
-            border: 1px solid #2c6aa0;
-            border-radius: 10px;
-            padding: 2px 8px;
-            font-size: 10px;
+            gap: 3px;
+            background: #2a2a3a;
+            border: 1px solid #555;
+            border-radius: 8px;
+            padding: 1px 5px;
+            font-size: 9px;
             color: #fff;
             cursor: pointer;
-            transition: background 0.15s, border-color 0.15s;
+            transition: background 0.12s, border-color 0.12s;
             user-select: none;
+            white-space: nowrap;
+            max-width: 90px;
+            overflow: hidden;
         }
-        .sb-player-badge:hover { background: #c62828; border-color: #e57373; }
-        .sb-player-badge .fa-volume-up { color: #7ab3e0; font-size: 9px; }
-        .sb-player-badge .fa-stop { color: #e84030; font-size: 8px; }
-        /* Badge de loop: verde pulsante */
-        .sb-player-badge--loop {
-            background: #0d3320;
-            border-color: #2e7d32;
-            animation: sb-badge-pulse 2s infinite;
-        }
-        .sb-player-badge--loop .fa-redo { color: #66bb6a; font-size: 9px; }
+        .sb-player-badge:hover { background: #3a3a5a; border-color: #7ab3e0; }
+        /* Muted: desaturated red-ish */
+        .sb-player-badge--muted { background: #3a1a1a; border-color: #7a3a3a; opacity: 0.75; }
+        .sb-player-badge--muted .fa-volume-mute { color: #c06060; }
+        /* Has active sound: blue glow */
+        .sb-player-badge--active { border-color: #4488cc; }
+        /* Loop: green pulse */
+        .sb-player-badge--loop { border-color: #2e7d32; animation: sb-badge-pulse 2s infinite; }
+        .sb-player-badge--loop .fa-redo { color: #66bb6a; }
         @keyframes sb-badge-pulse {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(46,125,50,0.6); }
-            50%       { box-shadow: 0 0 0 4px rgba(46,125,50,0); }
+            0%, 100% { box-shadow: 0 0 0 0 rgba(46,125,50,0.5); }
+            50%       { box-shadow: 0 0 0 3px rgba(46,125,50,0); }
         }
+        /* Stop icon inside badge */
+        .sb-badge-stop {
+            color: #e84030;
+            font-size: 8px;
+            cursor: pointer;
+            padding: 0 1px;
+        }
+        .sb-badge-stop:hover { color: #ff6050; }
+        /* Mute-all button: slightly larger */
+        .sb-mute-all {
+            background: #1a1a2a;
+            border-color: #444;
+            padding: 1px 6px;
+            font-size: 10px;
+        }
+        .sb-mute-all:hover { border-color: #e84030; }
+        .sb-mute-all .fa-volume-off { color: #aaa; }
+        .sb-mute-all .fa-volume-mute { color: #c06060; }
+        /* Volume icon */
+        .sb-player-badge .fa-volume-up { color: #7ab3e0; }
     `;
     document.head.appendChild(style);
 })();
