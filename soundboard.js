@@ -790,11 +790,7 @@ class SoundBoard {
                 type: SBSocketHelper.SOCKETMESSAGETYPE.PLAYER_STOP_LOOP,
                 payload: { identifyingPath, src: sound.src }
             });
-<<<<<<< HEAD
             SoundBoard._applyLoopActiveDOM(identifyingPath, false);
-=======
-            document.querySelectorAll(`#soundboard-app .btn[uuid="${CSS.escape(identifyingPath)}"]`).forEach(btn => btn.classList.remove('loop-active'));
->>>>>>> 982c47754933ee4ce239d5ab19b504c880adc636
             return;
         }
 
@@ -807,11 +803,7 @@ class SoundBoard {
             type: SBSocketHelper.SOCKETMESSAGETYPE.STOP,
             payload: sound
         });
-<<<<<<< HEAD
         SoundBoard._applyLoopActiveDOM(identifyingPath, false);
-=======
-        document.querySelectorAll(`#soundboard-app .btn[uuid="${CSS.escape(identifyingPath)}"]`).forEach(btn => btn.classList.remove('loop-active'));
->>>>>>> 982c47754933ee4ce239d5ab19b504c880adc636
     }
 
     static setLoopDelay(identifyingPath, delayInSeconds, button) {
@@ -863,12 +855,7 @@ class SoundBoard {
         });
         SoundBoard.currentlyPlayingSounds = SoundBoard.currentlyPlayingSounds.filter(s => s && s.identifyingPath !== identifyingPath);
         SoundBoard._updatePlayingIndicator(identifyingPath, false);
-<<<<<<< HEAD
         SoundBoard._applyLoopActiveDOM(identifyingPath, false);
-=======
-        // Remove indicador de loop-active
-        document.querySelectorAll(`#soundboard-app .btn[uuid="${CSS.escape(identifyingPath)}"]`).forEach(btn => btn.classList.remove('loop-active'));
->>>>>>> 982c47754933ee4ce239d5ab19b504c880adc636
     }
 
     static stopAllSounds() {
@@ -882,11 +869,7 @@ class SoundBoard {
             type: SBSocketHelper.SOCKETMESSAGETYPE.STOPALL
         });
         document.querySelectorAll('#soundboard-app .btn').forEach(btn => btn.classList.remove('loop-active'));
-<<<<<<< HEAD
         document.querySelectorAll('#soundboard-app .sb-cat-active-icon').forEach(ic => ic.remove());
-=======
-        // Limpar todos os indicadores visuais de "tocando"
->>>>>>> 982c47754933ee4ce239d5ab19b504c880adc636
         SoundBoard._updatePlayingIndicator(null, false);
         SoundBoard.currentlyPlayingSounds = [];
         // Limpar badges de sons de jogadores e loops
