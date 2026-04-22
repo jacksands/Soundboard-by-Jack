@@ -97,8 +97,9 @@ class SoundBoardApplication extends foundry.appv1.api.Application {
                 setTimeout(() => {
                     const appEl = document.getElementById('soundboard-app');
                     if (appEl) appEl.style.opacity = game.settings.get('Soundboard-by-Jack', 'opacity');
-                    // Restaurar estado do volume toggle
                     SoundBoard.restoreVolumeToggle(appEl);
+                    // Reaplica loop-active, sb-playing e ícones de categoria
+                    SoundBoard.restoreActiveStates();
                     clearInterval(renderedInterval);
                     renderedInterval = undefined;
                 }, 100);
@@ -124,7 +125,8 @@ class SoundBoardApplication extends foundry.appv1.api.Application {
                 });
             }
         });
-        var volume = game.settings.get('Soundboard-by-Jack', 'soundboardServerVolume');
+        // Use per-client volume (moduleGeneralVolume) so the slider reflects this client's setting
+        var volume = game.settings.get('Soundboard-by-Jack', 'moduleGeneralVolume') ?? 90;
         var collapse = totalCount > 2000;
         // V14: game.users.entities removed, use game.users.contents
         var players = game.users.contents.filter((el) => el.active && !el.isGM).map((el) => {
@@ -134,7 +136,8 @@ class SoundBoardApplication extends foundry.appv1.api.Application {
         var cacheMode = SoundBoard.cacheMode;
         var macroMode = SoundBoard.macroMode;
         var volumeMode = SoundBoard.volumeMode;
-        var isExampleAudio = game.settings.get('Soundboard-by-Jack', 'soundboardDirectory') === 'modules/Soundboard-by-Jack/exampleAudio';
+        var isExampleAudio = SoundBoard.getDirectoryForCurrentUser() === 'modules/Soundboard-by-Jack/exampleAudio';
+        var isGM = game.user.isGM;
 
         return {
             tab: { main: true },
@@ -147,7 +150,8 @@ class SoundBoardApplication extends foundry.appv1.api.Application {
             cacheMode,
             macroMode,
             volumeMode,
-            isExampleAudio
+            isExampleAudio,
+            isGM
         };
     }
 }

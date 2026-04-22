@@ -2,7 +2,7 @@
 class SBAudioHelper {
 
     activeSounds = [];
-    loopTimers = new Map(); // timers por identifyingPath
+    loopTimers = new Map();
 
     constructor() {}
 
@@ -18,9 +18,6 @@ class SBAudioHelper {
         } catch(e) {}
     }
 
-    // ---------------------------------------------------------
-    // PLAY NORMAL
-    // ---------------------------------------------------------
     async play({src, volume, detune}, sound) {
         if (game.settings.get('core', 'globalInterfaceVolume') === 0) {
             ui.notifications.warn(game.i18n.localize('SOUNDBOARD.notif.interfaceMuted'));
@@ -50,17 +47,38 @@ class SBAudioHelper {
             this.removeActiveSound(soundNode);
             if (!game.user.isGM) return;
 
+            const identPath = soundNode.identifyingPath;
+
+            // --- Loop de som do GM (caminho normal) ---
             if (sound.loop) {
                 this._scheduleNextLoop(sound);
                 return;
             }
 
-            // Som terminou naturalmente — remove indicador se não houver outra instância ativa
-            const stillActive = this.activeSounds.some(s => s.identifyingPath === sound.identifyingPath);
+            // --- Loop de som de jogador ---
+            const playerLoop = SoundBoard.playerLoopSounds?.[identPath];
+            if (playerLoop) {
+                this._schedulePlayerLoop(playerLoop);
+                return;
+            }
+
+            // --- Som terminou naturalmente (sem loop) ---
+            const stillActive = this.activeSounds.some(s => s.identifyingPath === identPath);
             if (!stillActive) {
                 SoundBoard.currentlyPlayingSounds = SoundBoard.currentlyPlayingSounds
-                    .filter(s => s && s.identifyingPath !== sound.identifyingPath);
-                SoundBoard._updatePlayingIndicator(sound.identifyingPath, false);
+                    .filter(s => s && s.identifyingPath !== identPath);
+                SoundBoard._updatePlayingIndicator(identPath, false);
+
+                // Se era um som de jogador (não-loop), atualiza o badge
+                if (SoundBoard.playerActiveSounds) {
+                    for (const [pid, entry] of Object.entries(SoundBoard.playerActiveSounds)) {
+                        if (entry.identifyingPath === identPath) {
+                            delete SoundBoard.playerActiveSounds[pid];
+                            SoundBoard._updatePlayerSoundIndicator();
+                            break;
+                        }
+                    }
+                }
             }
         });
 
@@ -78,44 +96,71 @@ class SBAudioHelper {
     }
 
     // ---------------------------------------------------------
-    // LOOPING — LÓGICA SEPARADA POR MODO
+    // LOOP DE SOM DO GM
     // ---------------------------------------------------------
     _scheduleNextLoop(sound) {
         const id = sound.identifyingPath;
-
-        // limpa timer anterior
         if (this.loopTimers.has(id)) {
             clearTimeout(this.loopTimers.get(id));
             this.loopTimers.delete(id);
         }
 
         let delay = 0;
-
         switch (sound.loopMode) {
-            case "simple":
-                delay = 0;
-                break;
-
-            case "fixed":
-                delay = (sound.loopDelayMin || 0) * 1000;
-                break;
-
-            case "random":
+            case 'simple':  delay = 0; break;
+            case 'fixed':   delay = (sound.loopDelayMin || 0) * 1000; break;
+            case 'random': {
                 const min = sound.loopDelayMin || 0;
                 const max = sound.loopDelayMax || min;
                 delay = (min + Math.random() * (max - min)) * 1000;
                 break;
-
-            default:
-                delay = 0;
+            }
+            default: delay = 0;
         }
 
         const timer = setTimeout(() => {
             if (!sound.loop) return;
             SoundBoard.playSound(id, true);
         }, delay);
-
         this.loopTimers.set(id, timer);
+    }
+
+    // ---------------------------------------------------------
+    // LOOP DE SOM DE JOGADOR (gerenciado pelo GM)
+    // ---------------------------------------------------------
+    _schedulePlayerLoop(entry) {
+        const id = entry.identifyingPath;
+
+        // Verifica se ainda está no mapa (não foi cancelado por stopSound/stopAll)
+        if (!SoundBoard.playerLoopSounds?.[id]) return;
+
+        let delay = 0;
+        switch (entry.loopMode) {
+            case 'simple':  delay = 0; break;
+            case 'fixed':   delay = (entry.loopDelayMin || 0) * 1000; break;
+            case 'random': {
+                const min = entry.loopDelayMin || 0;
+                const max = entry.loopDelayMax || min;
+                delay = (min + Math.random() * (max - min)) * 1000;
+                break;
+            }
+            default: delay = 0;
+        }
+
+        const timer = setTimeout(() => {
+            if (!SoundBoard.playerLoopSounds?.[id]) return;
+            const payload = { src: entry.src, volume: entry.volume, detune: 0, loop: false };
+            const soundExtras = { identifyingPath: id, individualVolume: 1 };
+            // Toca no GM e broadcast para todos
+            SoundBoard.audioHelper.play(payload, soundExtras);
+            SoundBoard.socketHelper.sendData({
+                type: SBSocketHelper.SOCKETMESSAGETYPE.PLAY,
+                payload,
+                soundExtras
+            });
+        }, delay);
+
+        this.loopTimers.set(id + '_player', timer);
     }
 
     // ---------------------------------------------------------
@@ -133,15 +178,17 @@ class SBAudioHelper {
             clearTimeout(this.loopTimers.get(id));
             this.loopTimers.delete(id);
         }
+        // Cancela também timer de player loop
+        if (this.loopTimers.has(id + '_player')) {
+            clearTimeout(this.loopTimers.get(id + '_player'));
+            this.loopTimers.delete(id + '_player');
+        }
     }
 
     stopAll() {
         for (const s of this.activeSounds) this._callStop(s);
         this.activeSounds = [];
-
-        for (const [id, t] of this.loopTimers.entries()) {
-            clearTimeout(t);
-        }
+        for (const t of this.loopTimers.values()) clearTimeout(t);
         this.loopTimers.clear();
     }
 

@@ -294,7 +294,11 @@ button.open-soundboard {
 }
 
 #soundboard-app #stop-all {
-  line-height: 0;
+  line-height: normal;
+  flex: 1 3;
+  padding: 2px 8px;
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 #soundboard-app #volume-container {
@@ -303,10 +307,38 @@ button.open-soundboard {
   width: 100%;
   left: 0;
   background: var(--SoundBoard-toolbar-color);
-  padding: 5px 25px 5px 15px;
+  padding: 3px 8px;
   z-index: 1;
   height: 36px;
   border-radius: 0 0 5px 5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+}
+
+/* Badge de sons do jogador — fica no centro do rodapé, cresce para preencher */
+#soundboard-app #sb-player-sounds-bar {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  overflow: hidden;
+}
+
+#soundboard-app #volume-text {
+  flex: 0 0 auto;
+  margin: 0;
+  font-size: 11px;
+  white-space: nowrap;
+  color: var(--SoundBoard-volume-text-color);
+  align-self: center;
+  text-shadow: var(--SoundBoard-text-shadow);
+}
+
+#soundboard-app #volumeRange {
+  flex: 0 0 90px;
 }
 
 #soundboard-app #toolbar {
@@ -498,4 +530,32 @@ input[type=range].sb-individual-volume::-webkit-slider-thumb {
 #soundboard-app .btn[uuid].loop-active.sb-playing {
     animation: none;
     box-shadow: none !important;
+}
+
+/* Help section: all text inherits theme color, never gray */
+.soundboard-help .sb-help-section-body,
+.soundboard-help .sb-help-section-body p,
+.soundboard-help .sb-help-section-body li,
+.soundboard-help .sb-help-section-body ul,
+.soundboard-help .sb-help-section-body ol {
+    color: inherit;
+    font-size: inherit;
+}
+
+/* ============================================================
+   ÍCONE DE SOM ATIVO NO HEADER DE CATEGORIA
+   ============================================================ */
+#soundboard-app .sb-collapse-header .sb-cat-active-icon {
+    margin-left: 8px;
+    font-size: 13px;
+    color: #e53935;
+    text-shadow: 0 0 2px #000, 0 0 2px #000, 0 0 3px #000;
+    opacity: 1;
+    animation: sb-cat-icon-pulse 1.8s ease-in-out infinite;
+    vertical-align: middle;
+}
+
+@keyframes sb-cat-icon-pulse {
+    0%, 100% { opacity: 0.9; }
+    50%       { opacity: 0.35; }
 }
