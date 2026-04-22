@@ -541,6 +541,7 @@ input[type=range].sb-individual-volume::-webkit-slider-thumb {
     color: inherit;
     font-size: inherit;
 }
+<<<<<<< HEAD
 
 /* ============================================================
    ÍCONE DE SOM ATIVO NO HEADER DE CATEGORIA
@@ -559,3 +560,5 @@ input[type=range].sb-individual-volume::-webkit-slider-thumb {
     0%, 100% { opacity: 0.9; }
     50%       { opacity: 0.35; }
 }
+=======
+>>>>>>> 982c47754933ee4ce239d5ab19b504c880adc636
