@@ -30,22 +30,21 @@
     },
     {
       "lang": "es",
-      "name": "Espa\u00f1ol",
+      "name": "Español",
       "path": "languages/es.json",
       "flags": {}
     },
     {
       "lang": "ja",
-      "name": "\u65e5\u672c\u8a9e",
+      "name": "日本語",
       "path": "languages/ja.json",
       "flags": {}
     }
   ],
   "socket": true,
   "compatibility": {
-    "minimum": "14",
-    "verified": "14.360",
-    "maximum": "14"
+    "minimum": "13",
+    "verified": "14.360"
   },
   "url": "https://github.com/jacksands/Soundboard-by-Jack",
   "manifest": "https://raw.githubusercontent.com/jacksands/Soundboard-by-Jack/refs/heads/main/module.json",
