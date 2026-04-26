@@ -30,7 +30,7 @@ class SBPlayerDirectoryManager extends foundry.applications.api.ApplicationV2 {
 
     async _prepareContext(options) {
         const playerDirs = game.settings.get('Soundboard-by-Jack', 'soundboardPlayerDirectories') || {};
-        // Mostra todos os jogadores n√£o-GM, mesmo desconectados
+        // Mostra todos os jogadores n?o-GM, mesmo desconectados
         const players = game.users.contents.filter(u => !u.isGM);
         
         const playersList = players.map(player => ({
@@ -46,7 +46,7 @@ class SBPlayerDirectoryManager extends foundry.applications.api.ApplicationV2 {
     async _renderHTML(context, options) {
         const isGM = game.user.isGM;
         const playerRows = context.players.map(player => {
-            // S√≥ GM pode editar qualquer campo, jogador s√≥ pode editar o pr√≥prio
+            // S®Æ GM pode editar qualquer campo, jogador s®Æ pode editar o pr®Æprio
             const editable = isGM;
             return `
             <div style="margin-bottom: 12px; padding: 8px; border: 1px solid #999; border-radius: 4px; background: #2a2a2a;">
@@ -60,7 +60,7 @@ class SBPlayerDirectoryManager extends foundry.applications.api.ApplicationV2 {
                            style="flex: 1; padding: 6px; border: 1px solid #666; border-radius: 3px; background: #1a1a1a; color: #fff;"
                            ${editable ? '' : 'readonly'}>
                     <button class="sb-player-picker-btn" data-player-id="${player.id}" 
-                            style="padding: 6px 10px; background: #444; color: #fff; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;" title="Pick folder">üìÅ</button>
+                            style="padding: 6px 10px; background: #444; color: #fff; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;" title="Pick folder">??</button>
                     <button class="sb-player-save-btn" data-player-id="${player.id}" 
                             style="padding: 6px 12px; background: #2c5aa0; color: white; border: none; border-radius: 3px; cursor: pointer; font-weight: bold;">Save</button>
                     ${player.hasDirectory ? `
@@ -111,12 +111,12 @@ class SBPlayerDirectoryManager extends foundry.applications.api.ApplicationV2 {
         html?.querySelectorAll('.sb-player-picker-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const playerId = e.target.dataset.playerId;
-                // S√≥ GM pode editar qualquer campo
+                // S®Æ GM pode editar qualquer campo
                 if (!isGM) return;
                 const input = html.querySelector(`.player-directory-input[data-player-id="${playerId}"]`);
                 const current = input?.value || '';
                 // Abre o file picker de pasta
-                const fp = new FilePicker({
+                const fp = new foundry.applications.apps.FilePicker.implementation({
                     type: 'folder',
                     current: current,
                     callback: path => {
@@ -131,7 +131,7 @@ class SBPlayerDirectoryManager extends foundry.applications.api.ApplicationV2 {
         html?.querySelectorAll('.sb-player-save-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const playerId = e.target.dataset.playerId;
-                // S√≥ GM pode salvar qualquer campo
+                // S®Æ GM pode salvar qualquer campo
                 if (!isGM) return;
                 const input = html.querySelector(`.player-directory-input[data-player-id="${playerId}"]`);
                 if (input) {
@@ -145,14 +145,14 @@ class SBPlayerDirectoryManager extends foundry.applications.api.ApplicationV2 {
         html?.querySelectorAll('.sb-player-clear-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const playerId = e.target.dataset.playerId;
-                // S√≥ GM pode limpar
+                // S®Æ GM pode limpar
                 if (!isGM) return;
                 await SBPlayerDirectoryManager.deleteDirectory(playerId);
                 await this.render(true);
             });
         });
 
-        // Bot√£o fechar
+        // Bot?o fechar
         const closeBtn = html?.querySelector('#sb-player-dir-close-btn');
         if (closeBtn) {
             closeBtn.addEventListener('click', () => {
@@ -225,7 +225,7 @@ class SoundBoard {
 
     static handlebarsHelpers = {
                 'is-playing': function(identifyingPath) {
-                    // Verifica se o som est√° tocando
+                    // Verifica se o som est®¢ tocando
                     if (!window.SoundBoard || !Array.isArray(window.SoundBoard.currentlyPlayingSounds)) return false;
                     return window.SoundBoard.currentlyPlayingSounds.some(s => s && s.identifyingPath === identifyingPath);
                 },
@@ -248,8 +248,8 @@ class SoundBoard {
         }
     }
 
-    // Settings client-scope podem ser lidos/escritos por qualquer usu√°rio.
-    // Settings world-scope restricted s√≥ o GM pode escrever (Foundry j√° bloqueia).
+    // Settings client-scope podem ser lidos/escritos por qualquer usu®¢rio.
+    // Settings world-scope restricted s®Æ o GM pode escrever (Foundry j®¢ bloqueia).
     static setUserSetting(key, value) {
         game.settings.set('Soundboard-by-Jack', key, value);
     }
@@ -259,7 +259,7 @@ class SoundBoard {
     }
 
     static async openSoundBoard() {
-        // S√≥ permite abrir se for GM ou se a op√ß√£o permitir
+        // S®Æ permite abrir se for GM ou se a op??o permitir
         const allowPlayers = game.settings.get('Soundboard-by-Jack', 'allowPlayerSoundBoard');
         if (!game.user.isGM && !allowPlayers) {
             ui.notifications.warn('SoundBoard: The GM has disabled the Player SoundBoard.');
@@ -276,7 +276,7 @@ class SoundBoard {
                         playerId: game.userId
                     });
                 }
-                // Abre assim mesmo ‚Äî o painel vai se atualizar automaticamente ao receber os sons
+                // Abre assim mesmo °™ o painel vai se atualizar automaticamente ao receber os sons
             }
         }
         
@@ -289,12 +289,12 @@ class SoundBoard {
             }
         }
         
-        // Log de depura√ß√£o: quantos sons carregados
+        // Log de depura??o: quantos sons carregados
         let total = 0;
         Object.keys(SoundBoard.sounds).forEach(k => total += SoundBoard.sounds[k].length);
         console.log(`SoundBoard | Sons carregados: ${total}`);
         
-        // Garante que pode abrir m√∫ltiplas vezes
+        // Garante que pode abrir m®≤ltiplas vezes
         if (SoundBoard.openedBoard && SoundBoard.openedBoard.rendered) {
             SoundBoard.openedBoard.close();
         }
@@ -303,7 +303,7 @@ class SoundBoard {
     }
 
     static async openSoundBoardFav() {
-        // Para jogadores, os sons s√£o recebidos via socket pelo GM
+        // Para jogadores, os sons s?o recebidos via socket pelo GM
         if (!game.user.isGM && (!SoundBoard.soundsLoaded || Object.keys(SoundBoard.sounds).length === 0)) {
             ui.notifications.warn('SoundBoard: Waiting for GM to sync sounds...');
         }
@@ -315,7 +315,7 @@ class SoundBoard {
     }
 
     static async openSoundBoardBundled() {
-        // Para jogadores, os sons s√£o recebidos via socket pelo GM
+        // Para jogadores, os sons s?o recebidos via socket pelo GM
         if (!game.user.isGM && (!SoundBoard.soundsLoaded || Object.keys(SoundBoard.sounds).length === 0)) {
             ui.notifications.warn('SoundBoard: Waiting for GM to sync sounds...');
         }
@@ -358,7 +358,7 @@ class SoundBoard {
             game.settings.set('Soundboard-by-Jack', 'soundboardServerVolume', volumePercentage);
         }
         // Non-GM: volume stored in moduleGeneralVolume (client-scope) and used
-        // in PLAYER_PLAY_REQUEST payload ‚Äî does not affect other clients.
+        // in PLAYER_PLAY_REQUEST payload °™ does not affect other clients.
     }
 
     static updateVolumeForSound(volumePercentage, identifyingPath) {
@@ -378,7 +378,7 @@ class SoundBoard {
     }
 
     static getVolume() {
-        // Usa o novo setting client-side para volume geral do m√≥dulo
+        // Usa o novo setting client-side para volume geral do m®Ædulo
         return (game.settings.get('Soundboard-by-Jack', 'moduleGeneralVolume') || 90) / 100;
     }
 
@@ -420,11 +420,11 @@ class SoundBoard {
         if (!sound) return;
 
         // ---------------------------------------------------------------
-        // JOGADOR (n√£o GM): n√£o toca localmente ‚Äî pede ao GM tocar globalmente
+        // JOGADOR (n?o GM): n?o toca localmente °™ pede ao GM tocar globalmente
         // ---------------------------------------------------------------
         if (!game.user.isGM) {
             if (push) {
-                // Resolve qual arquivo tocar (suporte a wildcard/m√∫ltiplos src)
+                // Resolve qual arquivo tocar (suporte a wildcard/m®≤ltiplos src)
                 let soundIndex = Math.floor(Math.random() * sound.src.length);
                 if (sound.lastPlayedIndex >= 0 && sound.src.length > 1 && sound.lastPlayedIndex === soundIndex) {
                     if (++soundIndex > sound.src.length - 1) soundIndex = 0;
@@ -477,7 +477,7 @@ class SoundBoard {
             detune,
             loop
         };
-        // Adiciona √† lista de sons tocando e atualiza indicador visual
+        // Adiciona ®§ lista de sons tocando e atualiza indicador visual
         if (!SoundBoard.currentlyPlayingSounds.some(s => s && s.identifyingPath === sound.identifyingPath)) {
             SoundBoard.currentlyPlayingSounds.push(sound);
         }
@@ -675,7 +675,7 @@ class SoundBoard {
         });
         if (sound) {
             sound.identifyingPath = identifyingPath;
-            // Aplicar configura√ß√£o de loop salva (se houver)
+            // Aplicar configura??o de loop salva (se houver)
             let loopSettings = game.settings?.get?.('Soundboard-by-Jack', 'soundboardIndividualLoopSettings') || {};
             if (loopSettings[identifyingPath]) {
                 sound.loopMode = loopSettings[identifyingPath].mode;
@@ -726,8 +726,8 @@ class SoundBoard {
     }
 
     /**
-     * Aplica/remove loop-active no DOM e expande a categoria se necess√°rio.
-     * Funciona mesmo quando o board est√° fechado (idempotente).
+     * Aplica/remove loop-active no DOM e expande a categoria se necess®¢rio.
+     * Funciona mesmo quando o board est®¢ fechado (idempotente).
      */
     static _applyLoopActiveDOM(identifyingPath, active) {
         const escaped = CSS.escape(identifyingPath);
@@ -744,7 +744,7 @@ class SoundBoard {
     }
 
     /**
-     * Varre todos os headers de categoria e atualiza o √≠cone de som ativo.
+     * Varre todos os headers de categoria e atualiza o ®™cone de som ativo.
      */
     static _updateCategoryHeaderIcons() {
         document.querySelectorAll('#soundboard-app #soundboard-filterable .sb-collapse-header').forEach(header => {
@@ -766,7 +766,7 @@ class SoundBoard {
     }
 
     /**
-     * Reaplica loop-active e sb-playing ap√≥s o board ser renderizado/aberto.
+     * Reaplica loop-active e sb-playing ap®Æs o board ser renderizado/aberto.
      */
     static restoreActiveStates() {
         const allSounds = {...SoundBoard.sounds, ...SoundBoard.bundledSounds};
@@ -784,7 +784,7 @@ class SoundBoard {
         sound.loop = false;
 
         if (!game.user.isGM) {
-            // Jogador: para √°udio local e pede ao GM para cancelar o loop dele
+            // Jogador: para ®¢udio local e pede ao GM para cancelar o loop dele
             SoundBoard.audioHelper.stop(sound);
             SoundBoard.socketHelper.sendData({
                 type: SBSocketHelper.SOCKETMESSAGETYPE.PLAYER_STOP_LOOP,
@@ -794,7 +794,7 @@ class SoundBoard {
             return;
         }
 
-        // GM: cancela loop local, para √°udio e notifica todos os clientes
+        // GM: cancela loop local, para ®¢udio e notifica todos os clientes
         if (SoundBoard.playerLoopSounds?.[identifyingPath]) {
             delete SoundBoard.playerLoopSounds[identifyingPath];
         }
@@ -813,11 +813,11 @@ class SoundBoard {
 
     static setLoopMode(identifyingPath, mode, delayMin, delayMax) {
         const sound = SoundBoard.getSoundFromIdentifyingPath(identifyingPath);
-        // Salvar configura√ß√£o individual
+        // Salvar configura??o individual
         let loopSettings = game.settings.get('Soundboard-by-Jack', 'soundboardIndividualLoopSettings') || {};
         if (mode === 'off') {
             if (sound.loop) SoundBoard.stopLoop(identifyingPath);
-            // Remove configura√ß√£o salva se existir
+            // Remove configura??o salva se existir
             if (loopSettings[identifyingPath]) {
                 delete loopSettings[identifyingPath];
                 game.settings.set('Soundboard-by-Jack', 'soundboardIndividualLoopSettings', loopSettings);
@@ -826,7 +826,7 @@ class SoundBoard {
         }
         const min = Math.max(0, Math.min(3600, Number(delayMin) || 0));
         const max = Math.max(min, Math.min(3600, Number(delayMax) || min));
-        // Salva as op√ß√µes
+        // Salva as op??es
         loopSettings[identifyingPath] = { mode, min, max };
         game.settings.set('Soundboard-by-Jack', 'soundboardIndividualLoopSettings', loopSettings);
         if (sound.loop) {
@@ -842,7 +842,7 @@ class SoundBoard {
 
     static stopSound(identifyingPath) {
         let sound = SoundBoard.getSoundFromIdentifyingPath(identifyingPath);
-        // Garante que o loop √© cancelado antes de parar o √°udio
+        // Garante que o loop ®¶ cancelado antes de parar o ®¢udio
         sound.loop = false;
         // Limpa loop de jogador se existir
         if (SoundBoard.playerLoopSounds?.[identifyingPath]) {
@@ -880,8 +880,8 @@ class SoundBoard {
 
 
     /**
-     * Atualiza o indicador visual de "tocando" (classe sb-playing) no bot√£o do som.
-     * @param {string|null} identifyingPath ‚Äî path do som, ou null para limpar todos
+     * Atualiza o indicador visual de "tocando" (classe sb-playing) no bot?o do som.
+     * @param {string|null} identifyingPath °™ path do som, ou null para limpar todos
      * @param {boolean} playing
      */
     static _updatePlayingIndicator(identifyingPath, playing) {
@@ -901,7 +901,7 @@ class SoundBoard {
     }
 
     static async _getBundledSounds(forceRefresh = false) {
-        // N√£o usa mais settings/localStorage para BundledSounds
+        // N?o usa mais settings/localStorage para BundledSounds
         const favoritesArray = game.settings.get('Soundboard-by-Jack', 'favoritedSounds');
         SoundBoard.bundledSounds = {};
 
@@ -909,7 +909,7 @@ class SoundBoard {
             if (pack.disabled) continue;
 
             if (typeof (ForgeVTT) !== 'undefined' && ForgeVTT.usingTheForge) {
-                const soundboardDirArray = await FilePicker.browse('data', pack.dir, {recursive: true});
+                const soundboardDirArray = await foundry.applications.apps.FilePicker.implementation.browse('data', pack.dir, {recursive: true});
                 const subDirs = soundboardDirArray.dirs.map((dir) => {
                     let subDir = dir.replace(pack.dir, '');
                     if (subDir[0] !== '/') subDir = `/${subDir}`;
@@ -976,13 +976,13 @@ class SoundBoard {
                     }
                 }
             } else {
-                let soundboardDirArray = await FilePicker.browse('data', pack.dir);
+                let soundboardDirArray = await foundry.applications.apps.FilePicker.implementation.browse('data', pack.dir);
                 for (const dir of soundboardDirArray.dirs) {
                     const dirShortName = this._formatName(`${pack.name} - ${dir.split(/[/]+/).pop()}`, false);
                     SoundBoard.bundledSounds[dirShortName] = [];
-                    let innerDirArray = await FilePicker.browse('data', dir);
+                    let innerDirArray = await foundry.applications.apps.FilePicker.implementation.browse('data', dir);
                     for (const wildcardDir of innerDirArray.dirs) {
-                        let wildcardFileArray = await FilePicker.browse('data', wildcardDir);
+                        let wildcardFileArray = await foundry.applications.apps.FilePicker.implementation.browse('data', wildcardDir);
                         wildcardFileArray = wildcardFileArray.files;
                         wildcardFileArray = wildcardFileArray.filter(function (file) {
                             switch (file.substring(file.length - 4)) {
@@ -1032,7 +1032,7 @@ class SoundBoard {
                 }
             }
         }
-        // N√£o salva mais BundledSounds em settings
+        // N?o salva mais BundledSounds em settings
         SoundBoard.soundsLoaded = true;
         if (!forceRefresh) {
             ui.notifications.notify(game.i18n.localize('SOUNDBOARD.notif.soundsDiscovered'));
@@ -1044,25 +1044,25 @@ class SoundBoard {
             // GM always uses the world setting
             return game.settings.get('Soundboard-by-Jack', 'soundboardDirectory');
         } else {
-            // Player: s√≥ pode usar o diret√≥rio definido pelo GM para ele, ou o padr√£o do GM
+            // Player: s®Æ pode usar o diret®Ærio definido pelo GM para ele, ou o padr?o do GM
             const playerDirs = game.settings.get('Soundboard-by-Jack', 'soundboardPlayerDirectories') || {};
             if (playerDirs[game.user.id] && playerDirs[game.user.id].trim()) {
                 return playerDirs[game.user.id].trim();
             }
-            // Fallback para o padr√£o do GM
+            // Fallback para o padr?o do GM
             const gmDefault = game.settings.get('Soundboard-by-Jack', 'soundboardDirectory');
             return gmDefault || 'modules/Soundboard-by-Jack/exampleAudio';
         }
     }
 
     static async getSounds(forceRefresh = false) {
-        // N√£o usa mais settings/localStorage para UserSounds
+        // N?o usa mais settings/localStorage para UserSounds
         const favoritesArray = game.settings.get('Soundboard-by-Jack', 'favoritedSounds');
         const source = game.settings.get('Soundboard-by-Jack', 'source');
 
         // Get the correct directory for current user
         let soundboardDir = SoundBoard.getDirectoryForCurrentUser();
-        console.log('SoundBoard: Usando diret√≥rio', soundboardDir);
+        console.log('SoundBoard: Usando diret®Ærio', soundboardDir);
 
         SoundBoard.soundsError = false;
         SoundBoard.soundsLoaded = false;
@@ -1077,7 +1077,7 @@ class SoundBoard {
             SoundBoard.sounds = {};
 
             if (typeof (ForgeVTT) !== 'undefined' && ForgeVTT.usingTheForge) {
-                const soundboardDirArray = await FilePicker.browse(source, soundboardDir, {recursive: true});
+                const soundboardDirArray = await foundry.applications.apps.FilePicker.implementation.browse(source, soundboardDir, {recursive: true});
 
                 if (soundboardDirArray.target !== soundboardDir.replace(' ', '%20')) {
                     throw 'Filepicker target did not match input. Parent directory may be correct. Soft failure.';
@@ -1149,14 +1149,14 @@ class SoundBoard {
                     }
                 }
 
-                // N√£o salva mais UserSounds em settings
+                // N?o salva mais UserSounds em settings
             } else {
                 let bucket;
                 if (source === 's3') {
-                    const bucketContainer = await FilePicker.browse(source, soundboardDir);
+                    const bucketContainer = await foundry.applications.apps.FilePicker.implementation.browse(source, soundboardDir);
                     bucket = bucketContainer.dirs[0];
                 }
-                const soundboardDirArray = await FilePicker.browse(source, soundboardDir, {
+                const soundboardDirArray = await foundry.applications.apps.FilePicker.implementation.browse(source, soundboardDir, {
                     ...(bucket && { bucket })
                 });
                 if (soundboardDirArray.target !== soundboardDir.replace(' ', '%20')) {
@@ -1166,11 +1166,11 @@ class SoundBoard {
                 for (const dir of soundboardDirArray.dirs) {
                     const dirShortName = this._formatName(dir.split(/[/]+/).pop(), false);
                     SoundBoard.sounds[dirShortName] = [];
-                    let innerDirArray = await FilePicker.browse(source, dir, {
+                    let innerDirArray = await foundry.applications.apps.FilePicker.implementation.browse(source, dir, {
                         ...(bucket && { bucket })
                     });
                     for (const wildcardDir of innerDirArray.dirs) {
-                        let wildcardFileArray = await FilePicker.browse(source, wildcardDir, {
+                        let wildcardFileArray = await foundry.applications.apps.FilePicker.implementation.browse(source, wildcardDir, {
                             ...(bucket && { bucket })
                         });
                         wildcardFileArray = wildcardFileArray.files;
@@ -1217,7 +1217,7 @@ class SoundBoard {
                     }
                 }
             }
-            // N√£o salva mais UserSounds em settings
+            // N?o salva mais UserSounds em settings
         } catch (error) {
             SoundBoard.soundsError = true;
             const errorMsg = error?.message || error?.toString() || 'Unknown error';
@@ -1318,14 +1318,14 @@ class SoundBoard {
         const rows = names.length
             ? names.map(n => `<div class="sb-scape-row" data-name="${n}" style="display:flex;gap:6px;align-items:center;margin:4px 0;padding:4px 0;border-bottom:1px solid #333;">
                 <span style="flex:1;font-weight:600;">${n}</span>
-                <button type="button" class="sb-scape-load" data-name="${n}" style="font-size:11px;padding:2px 8px;">‚ñ∂ Load</button>
-                <button type="button" class="sb-scape-macro" data-name="${n}" style="font-size:11px;padding:2px 8px;">‚öô Macro</button>
-                <button type="button" class="sb-scape-del" data-name="${n}" style="font-size:11px;padding:2px 8px;color:#e84030;background:none;border:1px solid #e84030;">‚úï</button>
+                <button type="button" class="sb-scape-load" data-name="${n}" style="font-size:11px;padding:2px 8px;">? Load</button>
+                <button type="button" class="sb-scape-macro" data-name="${n}" style="font-size:11px;padding:2px 8px;">? Macro</button>
+                <button type="button" class="sb-scape-del" data-name="${n}" style="font-size:11px;padding:2px 8px;color:#e84030;background:none;border:1px solid #e84030;">?</button>
             </div>`).join('')
             : '<p style="color:#888;font-size:12px;">No soundscapes saved yet.</p>';
 
         foundry.applications.api.DialogV2.wait({
-            window: { title: 'üéº Soundscape Manager', id: 'sb-soundscape-manager' },
+            window: { title: '?? Soundscape Manager', id: 'sb-soundscape-manager' },
             content: `<div style="padding:8px;">
                 <p style="margin-bottom:8px;font-size:12px;">Captures all currently looping sounds with their delay settings.</p>
                 <div style="display:flex;gap:6px;margin-bottom:12px;">
@@ -1333,7 +1333,7 @@ class SoundBoard {
                            style="flex:1;padding:4px 8px;border:1px solid #555;border-radius:4px;background:#2a2a2a;color:#fff;">
                     <button type="button" id="sb-scape-save-btn"
                             style="padding:4px 12px;background:#01701c;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:600;">
-                        üíæ Save current
+                        ?? Save current
                     </button>
                 </div>
                 <hr style="margin:8px 0;border-color:#444;">
@@ -1419,14 +1419,14 @@ class SoundBoard {
     /** Active player sounds: { playerId: {src, identifyingPath, playerName} } */
     static playerActiveSounds = {};
 
-    /** Muted player volumes: { playerId: previousVolume } ‚Äî null means not muted */
+    /** Muted player volumes: { playerId: previousVolume } °™ null means not muted */
     static playerMuteStates = {};
 
     /** Get safe display name: user.name only, max 10 chars */
     static _playerDisplayName(playerId) {
         const user = game.users?.get(playerId);
         const name = user?.name ?? 'Player';
-        return name.length > 10 ? name.slice(0, 10) + '‚Ä¶' : name;
+        return name.length > 10 ? name.slice(0, 10) + '°≠' : name;
     }
 
     /** Toggle mute for a specific player. Also stops any sound currently playing from them. */
@@ -1549,18 +1549,18 @@ class SoundBoard {
     }
 
     static _registerSettings() {
-                        // Prefer√™ncias do usu√°rio (client)
+                        // Prefer®∫ncias do usu®¢rio (client)
                         game.settings.register('Soundboard-by-Jack', 'nameTruncation', {
-                            name: 'Truncar nomes dos bot√µes',
-                            hint: 'Ativa/desativa truncamento de nomes dos bot√µes de som.',
+                            name: 'Truncar nomes dos bot?es',
+                            hint: 'Ativa/desativa truncamento de nomes dos bot?es de som.',
                             scope: 'client',
                             config: false,
                             type: Boolean,
                             default: true
                         });
                         game.settings.register('Soundboard-by-Jack', 'buttonFontSize', {
-                            name: 'Tamanho da fonte dos bot√µes',
-                            hint: 'Define o tamanho da fonte dos bot√µes do SoundBoard.',
+                            name: 'Tamanho da fonte dos bot?es',
+                            hint: 'Define o tamanho da fonte dos bot?es do SoundBoard.',
                             scope: 'client',
                             config: false,
                             type: Number,
@@ -1568,15 +1568,15 @@ class SoundBoard {
                         });
                         game.settings.register('Soundboard-by-Jack', 'volumeToggle', {
                             name: 'Mostrar/ocultar controles de volume',
-                            hint: 'Ativa/desativa o bot√£o de volume r√°pido.',
+                            hint: 'Ativa/desativa o bot?o de volume r®¢pido.',
                             scope: 'client',
                             config: false,
                             type: Boolean,
                             default: true
                         });
                         game.settings.register('Soundboard-by-Jack', 'moduleGeneralVolume', {
-                            name: 'Volume geral do m√≥dulo SoundBoard',
-                            hint: 'Volume principal do SoundBoard (n√£o afeta o volume global do Foundry).',
+                            name: 'Volume geral do m®Ædulo SoundBoard',
+                            hint: 'Volume principal do SoundBoard (n?o afeta o volume global do Foundry).',
                             scope: 'client',
                             config: false,
                             type: Number,
@@ -1584,7 +1584,7 @@ class SoundBoard {
                         });
                 game.settings.register('Soundboard-by-Jack', 'soundboardIndividualLoopSettings', {
                     name: 'Loop/Repeat por Som',
-                    hint: 'Salva as op√ß√µes de repeat/loop para cada som individualmente.',
+                    hint: 'Salva as op??es de repeat/loop para cada som individualmente.',
                     scope: 'world',
                     config: false,
                     restricted: true,
@@ -1600,7 +1600,7 @@ class SoundBoard {
             restricted: true
         });
 
-        // Menu para gerenciar diret√≥rios dos players (apenas GM)
+        // Menu para gerenciar diret®Ærios dos players (apenas GM)
         game.settings.registerMenu('Soundboard-by-Jack', 'playerDirectoryManager', {
             name: 'Manage Player SoundBoard Directories',
             label: 'Player Directories',
@@ -1623,12 +1623,12 @@ class SoundBoard {
                 if (value.length <= 0) {
                     game.settings.set('Soundboard-by-Jack', 'soundboardDirectory', 'modules/Soundboard-by-Jack/exampleAudio');
                 }
-                // For√ßa refresh para garantir persist√™ncia e recarregar sons
+                // For?a refresh para garantir persist®∫ncia e recarregar sons
                 window.location.reload();
             }
         });
 
-        // Op√ß√£o para permitir/desabilitar SoundBoard para players
+        // Op??o para permitir/desabilitar SoundBoard para players
         game.settings.register('Soundboard-by-Jack', 'allowPlayerSoundBoard', {
             name: 'Allow Player SoundBoard',
             hint: 'Permite que jogadores usem o SoundBoard. Se desativado, apenas o GM pode usar.',
@@ -1755,7 +1755,7 @@ class SoundBoard {
         // Handlebars helpers needed by all users (player board uses them too)
         Handlebars.registerHelper(SoundBoard.handlebarsHelpers);
 
-        // IMPORTANTE: inicializar helpers ANTES de qualquer opera√ß√£o que os use
+        // IMPORTANTE: inicializar helpers ANTES de qualquer opera??o que os use
         // (syncPlayerSoundsToAll precisa de socketHelper; play precisa de audioHelper)
         SoundBoard.socketHelper = new SBSocketHelper();
         SoundBoard.audioHelper = new SBAudioHelper();
@@ -1772,8 +1772,8 @@ class SoundBoard {
         }
     }
     
-    // Carregar sons de um diret√≥rio espec√≠fico (sem alterar SoundBoard.sounds global).
-    // Espelha a l√≥gica do getSounds principal: browse n√£o-recursivo, categoria por subdir.
+    // Carregar sons de um diret®Ærio espec®™fico (sem alterar SoundBoard.sounds global).
+    // Espelha a l®Ægica do getSounds principal: browse n?o-recursivo, categoria por subdir.
     static async loadSoundsFromDirectory(directory, source) {
         const sounds = {};
         const VALID_EXTS = ['.ogg', '.oga', '.mp3', '.wav', '.webm', '.opus', 'flac'];
@@ -1784,14 +1784,14 @@ class SoundBoard {
             const dir = directory.trim();
             const src = source || 'data';
 
-            const topLevel = await FilePicker.browse(src, dir);
-            console.log(`SoundBoard: loadSoundsFromDirectory "${dir}" ‚Üí ${topLevel.dirs.length} categorias, ${topLevel.files.length} arquivos no topo`);
+            const topLevel = await foundry.applications.apps.FilePicker.implementation.browse(src, dir);
+            console.log(`SoundBoard: loadSoundsFromDirectory "${dir}" °˙ ${topLevel.dirs.length} categorias, ${topLevel.files.length} arquivos no topo`);
 
             for (const subDir of topLevel.dirs) {
                 const categoryName = this._formatName(subDir.split(/[/]+/).pop(), false);
                 sounds[categoryName] = [];
 
-                const innerLevel = await FilePicker.browse(src, subDir);
+                const innerLevel = await foundry.applications.apps.FilePicker.implementation.browse(src, subDir);
 
                 // Arquivos direto na categoria
                 for (const file of innerLevel.files) {
@@ -1808,9 +1808,9 @@ class SoundBoard {
                     }
                 }
 
-                // Subpastas wildcard (grupo de varia√ß√µes do mesmo som)
+                // Subpastas wildcard (grupo de varia??es do mesmo som)
                 for (const wildcardDir of innerLevel.dirs) {
-                    const wildcardBrowse = await FilePicker.browse(src, wildcardDir);
+                    const wildcardBrowse = await foundry.applications.apps.FilePicker.implementation.browse(src, wildcardDir);
                     const validFiles = wildcardBrowse.files.filter(isValidAudio);
                     if (validFiles.length > 0) {
                         sounds[categoryName].push({
@@ -1830,7 +1830,7 @@ class SoundBoard {
     }
     
     // Enviar sons de cada jogador para ele mesmo
-    // Sincronizar sons de um jogador espec√≠fico (usado no ready e no userConnected)
+    // Sincronizar sons de um jogador espec®™fico (usado no ready e no userConnected)
     static async syncSoundsForPlayer(playerId) {
         if (!game.user.isGM) return;
         const player = game.users.get(playerId);
@@ -1846,12 +1846,12 @@ class SoundBoard {
             playerSounds = await SoundBoard.loadSoundsFromDirectory(playerDir, source);
             const totalSounds = Object.values(playerSounds).reduce((n, arr) => n + arr.length, 0);
             if (totalSounds === 0) {
-                console.warn(`SoundBoard: Diret√≥rio "${playerDir}" retornou 0 sons para ${player.name} ‚Äî usando sons do GM como fallback.`);
+                console.warn(`SoundBoard: Diret®Ærio "${playerDir}" retornou 0 sons para ${player.name} °™ usando sons do GM como fallback.`);
                 playerSounds = SoundBoard.sounds;
             }
         } else {
-            // Sem diret√≥rio espec√≠fico: usa os sons do GM como fallback
-            console.log(`SoundBoard: Sem diret√≥rio para ${player.name} ‚Äî enviando sons do GM.`);
+            // Sem diret®Ærio espec®™fico: usa os sons do GM como fallback
+            console.log(`SoundBoard: Sem diret®Ærio para ${player.name} °™ enviando sons do GM.`);
             playerSounds = SoundBoard.sounds;
         }
 
@@ -1869,7 +1869,7 @@ class SoundBoard {
             if (player.isGM) continue;
             await SoundBoard.syncSoundsForPlayer(player.id);
         }
-        console.log('SoundBoard: Sincroniza√ß√£o de sons de jogadores conclu√≠da');
+        console.log('SoundBoard: Sincroniza??o de sons de jogadores conclu®™da');
     }
 
     static addSoundBoard(controls) {
@@ -1924,19 +1924,19 @@ Hooks.on('userConnected', (user, connected) => {
     SoundBoard._updatePlayerSoundIndicator();
     if (!connected) return;
     setTimeout(async () => {
-        console.log(`SoundBoard: Player ${user.name} connected ‚Äî syncing sounds.`);
+        console.log(`SoundBoard: Player ${user.name} connected °™ syncing sounds.`);
         await SoundBoard.syncSoundsForPlayer(user.id);
     }, 2000);
 });
 
-// Esconder configura√ß√µes do SoundBoard para jogadores n√£o-GM
+// Esconder configura??es do SoundBoard para jogadores n?o-GM
 Hooks.on('renderSettingsConfig', (app, element) => {
     if (game.user.isGM) return;
     const el = element instanceof HTMLElement ? element : element[0];
     if (!el) return;
 
-    // V14: procura se√ß√£o/categoria do m√≥dulo e esconde tudo dela
-    // Tenta por data-module, data-setting-id, e text content do cabe√ßalho
+    // V14: procura se??o/categoria do m®Ædulo e esconde tudo dela
+    // Tenta por data-module, data-setting-id, e text content do cabe?alho
     const selectors = [
         '[data-setting-id^="Soundboard-by-Jack."]',
         '[data-key^="Soundboard-by-Jack."]',
@@ -1948,7 +1948,7 @@ Hooks.on('renderSettingsConfig', (app, element) => {
         });
     });
 
-    // Esconde cabe√ßalhos de se√ß√£o do m√≥dulo (V14 usa <section data-category="...">)
+    // Esconde cabe?alhos de se??o do m®Ædulo (V14 usa <section data-category="...">)
     el.querySelectorAll('section[data-category], [data-module]').forEach(section => {
         const cat = section.dataset.category ?? section.dataset.module ?? '';
         if (cat.toLowerCase().includes('soundboard')) section.remove();
@@ -1958,7 +1958,7 @@ Hooks.on('renderSettingsConfig', (app, element) => {
     el.querySelectorAll('h2, h3, .settings-header').forEach(h => {
         if (/soundboard/i.test(h.textContent)) {
             let el2 = h;
-            // Remove o heading e todos os form-groups seguintes at√© o pr√≥ximo heading
+            // Remove o heading e todos os form-groups seguintes at®¶ o pr®Æximo heading
             const toRemove = [el2];
             let next = el2.nextElementSibling;
             while (next && !next.matches('h2, h3, .settings-header')) {
