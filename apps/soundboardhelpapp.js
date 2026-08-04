@@ -57,7 +57,7 @@ const checkRender = setInterval(() => {
             if (existing) {
                 macro = existing;
                 await macro.update({ ownership: { default: 2 } });
-                ui.notifications.info(`SoundBoard: Macro "${macroName}" already exists — permissions set to Observer.`);
+                console.log(`SoundBoard | Macro "${macroName}" already exists — permissions set to Observer.`);
             } else {
                 macro = await Macro.create({
                     name: macroName,
@@ -66,7 +66,7 @@ const checkRender = setInterval(() => {
                     img: 'icons/magic/sonic/projectile-sound-rings-wave.webp',
                     ownership: { default: 2 }   // Observer: players can see and drag to their hotbar
                 });
-                ui.notifications.notify(`SoundBoard: Macro "${macroName}" created with Observer permission!`);
+                console.log(`SoundBoard | Macro "${macroName}" created with Observer permission!`);
             }
 
             // Add to GM hotbar
@@ -75,7 +75,7 @@ const checkRender = setInterval(() => {
                 const emptySlot = Array.from({length: 10}, (_, i) => i + 1).find(s => !usedSlots.has(s));
                 if (emptySlot) {
                     await game.user.assignHotbarMacro(macro, emptySlot);
-                    ui.notifications.notify(`SoundBoard: Macro added to hotbar slot ${emptySlot}.`);
+                    console.log(`SoundBoard | Macro added to hotbar slot ${emptySlot}.`);
                 } else {
                     ui.notifications.warn('SoundBoard: No empty hotbar slot. Macro is in the Macro Directory.');
                 }

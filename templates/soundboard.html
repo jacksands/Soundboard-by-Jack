@@ -33,9 +33,18 @@
                 }
             }
         });
-        document.addEventListener('click', () => {
-            document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
-        });
+        // Guard: this whole <script> block re-runs on every render of the app
+        // (AppV1 + jQuery .html() re-executes embedded <script> tags). Without
+        // this guard, a new document-level 'click' listener was being added on
+        // every open/refresh and never removed, accumulating for the rest of
+        // the session and causing cumulative slowdown on every click anywhere
+        // in Foundry, not just inside SoundBoard.
+        if (!window.__sbDropdownCloserAttached) {
+            document.addEventListener('click', () => {
+                document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none');
+            });
+            window.__sbDropdownCloserAttached = true;
+        }
 
         // --- Font size controls ---
         const FONT_KEY = 'SoundBoardModule.fontSize';

@@ -165,10 +165,10 @@ class SBPlayerDirectoryManager extends foundry.applications.api.ApplicationV2 {
         const playerDirs = game.settings.get('Soundboard-by-Jack', 'soundboardPlayerDirectories') || {};
         if (directory && directory.trim()) {
             playerDirs[playerId] = directory.trim();
-            ui.notifications.info(`Directory set for player`);
+            console.log('SoundBoard | Directory set for player');
         } else {
             delete playerDirs[playerId];
-            ui.notifications.info(`Directory cleared for player`);
+            console.log('SoundBoard | Directory cleared for player');
         }
         await game.settings.set('Soundboard-by-Jack', 'soundboardPlayerDirectories', playerDirs);
     }
@@ -269,7 +269,7 @@ class SoundBoard {
             console.log(`SoundBoard (Player): Sons carregados: ${SoundBoard.soundsLoaded}, Categorias: ${Object.keys(SoundBoard.sounds).length}`);
             if (!SoundBoard.soundsLoaded || Object.keys(SoundBoard.sounds).length === 0) {
                 // Pede ao GM para enviar os sons agora
-                ui.notifications.info('SoundBoard: Requesting sounds from GM...');
+                console.log('SoundBoard | Requesting sounds from GM...');
                 if (SoundBoard.socketHelper) {
                     SoundBoard.socketHelper.sendData({
                         type: SBSocketHelper.SOCKETMESSAGETYPE.REQUEST_SYNC,
@@ -1035,7 +1035,7 @@ class SoundBoard {
         // N?o salva mais BundledSounds em settings
         SoundBoard.soundsLoaded = true;
         if (!forceRefresh) {
-            ui.notifications.notify(game.i18n.localize('SOUNDBOARD.notif.soundsDiscovered'));
+            console.log('SoundBoard | ' + game.i18n.localize('SOUNDBOARD.notif.soundsDiscovered'));
         }
     }
 
@@ -1242,7 +1242,7 @@ class SoundBoard {
     static async refreshSounds({notify, bringToTop} = {notify: true, bringToTop: true}) {
         if (game.user.isGM) {
             if (notify) {
-                ui.notifications.notify(game.i18n.localize('SOUNDBOARD.notif.refreshing'));
+                console.log('SoundBoard | ' + game.i18n.localize('SOUNDBOARD.notif.refreshing'));
             }
             SoundBoard.stopAllSounds();
             SoundBoard.soundsError = false;
@@ -1254,7 +1254,7 @@ class SoundBoard {
                 }
             }
             if (notify) {
-                ui.notifications.notify(game.i18n.localize('SOUNDBOARD.notif.refreshComplete'));
+                console.log('SoundBoard | ' + game.i18n.localize('SOUNDBOARD.notif.refreshComplete'));
             }
         }
     }
@@ -1279,7 +1279,7 @@ class SoundBoard {
         const saved = game.settings.get('Soundboard-by-Jack', 'savedSoundscapes') || {};
         saved[name] = active;
         game.settings.set('Soundboard-by-Jack', 'savedSoundscapes', saved);
-        ui.notifications.notify(`Soundscape "${name}" saved (${active.length} sounds).`);
+        console.log(`SoundBoard | Soundscape "${name}" saved (${active.length} sounds).`);
     }
 
     static loadSoundscape(name) {
@@ -1289,7 +1289,7 @@ class SoundBoard {
         scape.forEach(entry => {
             SoundBoard.startLoop(entry.identifyingPath, entry.loopMode, entry.loopDelayMin, entry.loopDelayMax);
         });
-        ui.notifications.notify(`Soundscape "${name}" loaded.`);
+        console.log(`SoundBoard | Soundscape "${name}" loaded.`);
     }
 
     static deleteSoundscape(name) {
@@ -1308,7 +1308,7 @@ class SoundBoard {
         const command = lines.join('\n');
         Macro.create({ name: `Soundscape - ${name}`, type: 'script', command,
             img: 'modules/Soundboard-by-Jack/bundledDocs/sbmacro.png' })
-            .then(m => ui.notifications.notify(`Macro "Soundscape - ${name}" created.`));
+            .then(m => console.log(`SoundBoard | Macro "Soundscape - ${name}" created.`));
     }
 
     static openSoundscapeManager() {
@@ -1762,7 +1762,11 @@ class SoundBoard {
 
         if (game.user.isGM) {
             SoundBoard.soundsError = false;
-            await SoundBoard.getSounds();
+            // Silent on automatic load (F5 / world open): full scan still runs,
+            // but forceRefresh=true suppresses the "soundsDiscovered" notification.
+            // The manual Refresh button (refreshSounds()) keeps its own explicit
+            // "Refreshing..." / "Refresh complete" notifications.
+            await SoundBoard.getSounds(true);
             Handlebars.registerPartial('SoundBoardPackageCard', await foundry.applications.handlebars.getTemplate('modules/Soundboard-by-Jack/templates/partials/packagecard.hbs'));
             
             // Send sounds to each connected player

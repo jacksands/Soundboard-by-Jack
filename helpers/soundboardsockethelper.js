@@ -144,7 +144,7 @@ class SBSocketHelper {
                         SoundBoard.sounds = data.sounds || {};
                         SoundBoard.soundsLoaded = true;
                         SoundBoard.soundsError = false;
-                        ui.notifications.info(`SoundBoard: ${total} sounds synced from GM!`);
+                        console.log(`SoundBoard | ${total} sounds synced from GM!`);
                         if (SoundBoard.openedBoard?.rendered) {
                             SoundBoard.openedBoard.render();
                         }

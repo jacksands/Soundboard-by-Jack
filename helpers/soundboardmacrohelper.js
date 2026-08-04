@@ -8,7 +8,7 @@ class SBMacroHelper {
             return macro.name === macroName;
         });
         if (existingMacro) {
-            ui.notifications.notify(game.i18n.localize('SOUNDBOARD.notif.macroExists', {macro: macroName}));
+            console.log('SoundBoard | ' + game.i18n.localize('SOUNDBOARD.notif.macroExists', {macro: macroName}));
             macroData = existingMacro;
         } else {
             macroData = await Macro.create({
@@ -17,7 +17,7 @@ class SBMacroHelper {
                 type: 'script',
                 img: 'modules/Soundboard-by-Jack/bundledDocs/sbmacro.png'
             });
-            ui.notifications.notify(game.i18n.localize('SOUNDBOARD.notif.macroCreated', {macro: macroName}));
+            console.log('SoundBoard | ' + game.i18n.localize('SOUNDBOARD.notif.macroCreated', {macro: macroName}));
         }
         // V14: TinyMCE removed. Journal macro insertion no longer supported.
         // Users can drag macros from the Macro Directory into journal entries manually.
@@ -27,9 +27,9 @@ class SBMacroHelper {
         let existingMacros = game.macros.filter(macro => macro.name.indexOf('SoundBoard - ') === 0).map(macro => macro.id);
         if (existingMacros.length > 0) {
             await Macro.deleteDocuments(existingMacros);
-            ui.notifications.notify(game.i18n.localize('SOUNDBOARD.notif.deleteMacros'));
+            console.log('SoundBoard | ' + game.i18n.localize('SOUNDBOARD.notif.deleteMacros'));
         } else {
-            ui.notifications.notify(game.i18n.localize('SOUNDBOARD.notif.noMacros'));
+            console.log('SoundBoard | ' + game.i18n.localize('SOUNDBOARD.notif.noMacros'));
         }
     }
 }

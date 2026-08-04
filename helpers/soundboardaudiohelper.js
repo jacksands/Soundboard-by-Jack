@@ -239,6 +239,6 @@ class SBAudioHelper {
     }
 
     cacheComplete({src, player}) {
-        ui.notifications.notify(`${player} cache complete for ${src}`);
+        console.log(`SoundBoard | ${player} cache complete for ${src}`);
     }
 }
